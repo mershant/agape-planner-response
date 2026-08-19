@@ -1,0 +1,27 @@
+---
+okf_version: "0.2"
+---
+
+# AGAPE Planner Response
+
+This bundle is the current product and implementation map for the clean
+SillyTavern extension.
+
+## Current concepts
+
+- [Product Identity](concepts/product-identity.md) - product boundary and the single implementation-status owner.
+- [Operation Flow](concepts/operation-flow.md) - ordered relationship between native Send, Planner, Response, and the visible reply.
+- [Planner Request Contract](concepts/planner-request-contract.md) - accepted bare Planner request and output boundary.
+- [Response Request Contract](concepts/response-request-contract.md) - proposed exact handoff packet and its approval gate.
+- [SillyTavern Integration](concepts/sillytavern-integration.md) - native host ownership and isolated development boundary.
+- [Acceptance Contract](concepts/acceptance-contract.md) - evidence required for tested, live-proven, and accepted states.
+
+## Current source
+
+- [David's Simple Planner and Response Direction](sources/david-simple-planner-response-direction-2026-08-19.md) - preserved product wording, repository choices, and authorization.
+
+## Authority
+
+David's current words outrank this bundle. Concepts contain the current
+interpretation. Source notes preserve wording and provenance but do not
+authorize later stages by themselves.
