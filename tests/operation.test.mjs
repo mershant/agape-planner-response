@@ -59,18 +59,21 @@ test('one Send visibly completes Planning before Response in the same message', 
   assert.equal(plannerRequest.length, 1);
   assert.match(plannerRequest[0].content, /<message role="user" name="Eloise">\nCurrent turn\n<\/message>/);
   assert.match(plannerRequest[0].content, /<planner_template>\nexpanded state\n<\/planner_template>/);
+  const eventNames = events.map(([name]) => name);
+  assert.equal(eventNames.indexOf('expand'), 0);
+  assert.ok(eventNames.indexOf('planning') < eventNames.indexOf('planner-request'));
+  assert.ok(eventNames.indexOf('capture-normal-response') > eventNames.indexOf('planning-complete'));
   assert.deepEqual(responseRequest, [
     { role: 'system', content: 'Active preset last block' },
     { role: 'system', content: filledPlanning },
   ]);
-  assert.deepEqual(events.map(([name]) => name), [
+  assert.deepEqual(eventNames, [
     'expand',
-    'capture-normal-response',
     'planning',
     'planner-request',
     'planning',
-    'planning',
     'planning-complete',
+    'capture-normal-response',
     'response-request',
     'response',
     'response-complete',
@@ -107,6 +110,33 @@ test('Stop during Planner removes the provisional message and never starts Respo
   assert.equal(rolledBack, true);
   assert.equal(responseStarted, false);
   assert.equal(result.stopped, true);
+});
+
+test('Stop during Planner packet construction ends as stopped before creating a shell', async () => {
+  const controller = new AbortController();
+  let shellCreated = false;
+
+  const result = await runPlannerResponse({
+    settings: {
+      plannerPrompt: 'Prompt',
+      planner: { source: 'profile' },
+      response: { source: 'profile' },
+    },
+    substituteParams: (text) => text,
+    collectPlannerContext: async () => {
+      controller.abort();
+      return {};
+    },
+    createMessage: async () => { shellCreated = true; },
+    requestPlanner: async () => '',
+    captureResponseMessages: async () => [],
+    requestResponse: async () => '',
+    cleanResponse: (text) => text,
+    signal: controller.signal,
+  });
+
+  assert.equal(result.stopped, true);
+  assert.equal(shellCreated, false);
 });
 
 test('provider cancellation wording is a Response failure unless Stop aborted the signal', async () => {

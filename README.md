@@ -11,6 +11,10 @@ native SillyTavern Send
 -> visible assistant response
 ```
 
+Normal, swipe, and regenerate each run their own two-request operation: one
+Planner request followed by one Response request. A swipe stores its own
+Planning with that swipe. Continue remains native SillyTavern behavior.
+
 It does not inherit AGAPE Lite's abandoned Planner architecture.
 
 The Planner can use Minimal context or copy the enabled prompts from the current

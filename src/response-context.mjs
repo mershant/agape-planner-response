@@ -1,4 +1,8 @@
-export async function captureNormalResponseMessages(context, squashMessages) {
+export async function captureNormalResponseMessages(
+  context,
+  squashMessages,
+  generationType = 'normal',
+) {
   if (context.mainApi !== 'openai') {
     throw new Error('Planner Response currently supports Chat Completion only');
   }
@@ -11,7 +15,7 @@ export async function captureNormalResponseMessages(context, squashMessages) {
 
   context.eventSource.on(context.eventTypes.CHAT_COMPLETION_PROMPT_READY, capture);
   try {
-    await context.generate('normal', {}, true);
+    await context.generate(generationType, {}, true);
   } finally {
     context.eventSource.removeListener(context.eventTypes.CHAT_COMPLETION_PROMPT_READY, capture);
   }

@@ -1,5 +1,24 @@
 const clone = (value) => structuredClone(value);
 
+function previousSwipeSnapshot(message) {
+  const snapshot = clone(message);
+  if (!Array.isArray(snapshot.swipes) || snapshot.swipes.length === 0) return snapshot;
+  const swipeId = Math.min(
+    Math.max(0, Number(snapshot.swipe_id) - 1),
+    snapshot.swipes.length - 1,
+  );
+  snapshot.swipe_id = swipeId;
+  snapshot.mes = snapshot.swipes[swipeId];
+  const info = snapshot.swipe_info?.[swipeId];
+  if (info) {
+    snapshot.extra = clone(info.extra ?? {});
+    snapshot.send_date = info.send_date;
+    snapshot.gen_started = info.gen_started;
+    snapshot.gen_finished = info.gen_finished;
+  }
+  return snapshot;
+}
+
 function syncCurrentSwipe(message) {
   const swipeId = message?.swipe_id;
   if (!Number.isInteger(swipeId) || swipeId < 0) return;
@@ -15,6 +34,8 @@ function syncCurrentSwipe(message) {
 }
 
 function setPlanningHeader(messageId, done) {
+  const message = globalThis.document?.querySelector?.(`#chat .mes[mesid="${messageId}"]`);
+  message?.classList?.add('agape-planning');
   const header = globalThis.document?.querySelector?.(
     `#chat .mes[mesid="${messageId}"] .mes_reasoning_header_title`,
   );
@@ -30,38 +51,6 @@ export function refreshPlanningHeaders(context) {
   }
 }
 
-export function installPlanningHeaderObserver(context) {
-  const chat = globalThis.document?.querySelector?.('#chat');
-  if (!chat || typeof globalThis.MutationObserver !== 'function') return null;
-  if (chat.__agapePlanningObserver) return chat.__agapePlanningObserver;
-
-  const observer = new globalThis.MutationObserver((mutations) => {
-    const messageIds = new Set();
-    const addMessage = (node) => {
-      const element = node?.nodeType === 1 ? node : node?.parentElement;
-      const message = element?.closest?.('.mes');
-      const messageId = Number(message?.getAttribute?.('mesid'));
-      if (Number.isInteger(messageId)) messageIds.add(messageId);
-      for (const nested of element?.querySelectorAll?.('.mes[mesid]') ?? []) {
-        const nestedId = Number(nested.getAttribute('mesid'));
-        if (Number.isInteger(nestedId)) messageIds.add(nestedId);
-      }
-    };
-    for (const mutation of mutations) {
-      addMessage(mutation.target);
-      for (const node of mutation.addedNodes ?? []) addMessage(node);
-    }
-    for (const messageId of messageIds) {
-      if (context.chat[messageId]?.extra?.agapePlannerResponsePlanning === true) {
-        setPlanningHeader(messageId, true);
-      }
-    }
-  });
-  observer.observe(chat, { childList: true, subtree: true, characterData: true });
-  chat.__agapePlanningObserver = observer;
-  return observer;
-}
-
 export async function recoverStalePendingMessage(context) {
   const last = context.chat.at(-1);
   if (last?.is_user !== false || last.extra?.agapePlannerResponsePending !== true) return false;
@@ -74,6 +63,21 @@ export async function recoverStalePendingMessage(context) {
     await context.saveChat?.();
     return 'response-failed';
   }
+  if (last.extra.agapePlannerResponseCandidateType === 'swipe') {
+    if (!Array.isArray(last.swipes) || last.swipes.length < 2) return false;
+    const pendingId = Number(last.swipe_id);
+    if (!Number.isInteger(pendingId) || pendingId < 0 || pendingId >= last.swipes.length) return false;
+    last.swipes.splice(pendingId, 1);
+    last.swipe_info?.splice?.(pendingId, 1);
+    const restoredId = Math.max(0, Math.min(pendingId - 1, last.swipes.length - 1));
+    last.swipe_id = restoredId;
+    last.mes = last.swipes[restoredId];
+    const info = last.swipe_info?.[restoredId];
+    if (info) last.extra = clone(info.extra ?? {});
+    context.updateMessageBlock?.(context.chat.length - 1, last);
+    await context.saveChat?.();
+    return 'swipe-removed';
+  }
   await context.deleteLastMessage();
   await context.saveChat?.();
   return 'planning-removed';
@@ -81,12 +85,23 @@ export async function recoverStalePendingMessage(context) {
 
 export async function createNativeMessage({
   context,
+  type = 'normal',
+  previousCandidate = null,
   loadReasoning = () => import('/scripts/reasoning.js'),
   now = () => new Date(),
 }) {
   const startedAt = now();
+  const previousSwipe = type === 'swipe' && context.chat.at(-1)?.is_user === false
+    ? previousSwipeSnapshot(context.chat.at(-1))
+    : null;
+  const previousRegenerate = type === 'regenerate'
+    ? clone(previousCandidate ?? (context.chat.at(-1)?.is_user === false ? context.chat.at(-1) : null))
+    : null;
+  if (previousRegenerate && context.chat.at(-1)?.is_user === false) {
+    await context.deleteLastMessage();
+  }
   await context.saveReply({
-    type: 'normal',
+    type: type === 'swipe' ? 'swipe' : 'normal',
     getMessage: '...',
     fromStreaming: true,
     reasoning: '',
@@ -101,6 +116,7 @@ export async function createNativeMessage({
   message.extra.agapePlannerResponsePending = true;
   message.extra.agapePlannerResponsePhase = 'planning';
   message.extra.agapePlannerResponsePlanning = true;
+  message.extra.agapePlannerResponseCandidateType = type;
 
   const { ReasoningHandler, ReasoningState, ReasoningType } = await loadReasoning();
   const handler = new ReasoningHandler(startedAt);
@@ -133,8 +149,15 @@ export async function createNativeMessage({
       0,
       Number(endedAt ?? now()) - Number(startedAt),
     );
-    syncCurrentSwipe(current);
-    handler.updateDom(messageId);
+    if (done) {
+      syncCurrentSwipe(current);
+      handler.updateDom(messageId);
+    } else {
+      const content = globalThis.document?.querySelector?.(
+        `#chat .mes[mesid="${messageId}"] .mes_reasoning`,
+      );
+      if (content) content.textContent = value;
+    }
     setPlanningHeader(messageId, done);
   }
 
@@ -149,6 +172,7 @@ export async function createNativeMessage({
     finalized.extra ??= {};
     delete finalized.extra.agapePlannerResponsePending;
     delete finalized.extra.agapePlannerResponsePhase;
+    delete finalized.extra.agapePlannerResponseCandidateType;
     syncCurrentSwipe(finalized);
     setPlanningHeader(messageId, true);
     await context.saveChat?.();
@@ -178,9 +202,23 @@ export async function createNativeMessage({
       const current = ownedMessage();
       current.mes = String(text ?? '');
       current.gen_finished = now();
-      syncCurrentSwipe(current);
-      context.updateMessageBlock?.(messageId, current);
+      const content = globalThis.document?.querySelector?.(
+        `#chat .mes[mesid="${messageId}"] .mes_text`,
+      );
+      if (content) content.textContent = current.mes;
       setPlanningHeader(messageId, true);
+    },
+
+    async withoutCandidate(callback) {
+      const current = ownedMessage();
+      const previous = current.is_system;
+      current.is_system = true;
+      try {
+        return await callback();
+      } finally {
+        if (previous === undefined) delete current.is_system;
+        else current.is_system = previous;
+      }
     },
 
     async commitResponse(text) {
@@ -197,8 +235,15 @@ export async function createNativeMessage({
 
     async rollback() {
       const current = context.chat[messageId];
-      if (messageId !== context.chat.length - 1
-        || current?.extra?.agapePlannerResponsePending !== true) return;
+      if (messageId !== context.chat.length - 1 || current?.extra?.agapePlannerResponsePending !== true) return;
+      const previousCandidate = previousSwipe ?? previousRegenerate;
+      if (previousCandidate) {
+        for (const key of Object.keys(current)) delete current[key];
+        Object.assign(current, clone(previousCandidate));
+        context.updateMessageBlock?.(messageId, current);
+        await context.saveChat?.();
+        return;
+      }
       await context.deleteLastMessage();
       await context.saveChat?.();
     },

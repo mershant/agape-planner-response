@@ -4,7 +4,7 @@ title: Planner to Response Operation Flow
 description: Defines the ordered native Send operation without inventing packet details.
 tags: [runtime, planner, response, native-send]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T11:24:52Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -16,15 +16,23 @@ sources:
     title: David's exact Planner to Response direction
     author: human:david
     last_modified: 2026-08-19
+  - id: david-generation-candidate
+    resource: /sources/david-generation-candidate-performance-2026-08-20.md
+    title: David's generation candidate and performance correction
+    author: human:david
+    last_modified: 2026-08-20
 ---
 
 # Flow
 
-One ordinary native SillyTavern Send runs one ordered operation:[^david-direction]
+One normal, swipe, or regenerate assistant candidate runs one ordered
+operation:[^david-generation-candidate]
 
-1. SillyTavern saves the user's message.
-2. The extension takes ownership of that exact Send, opens one native assistant
-   message, and prevents a duplicate host-generated response.
+1. For normal, SillyTavern saves the user's message. Swipe and regenerate use
+   the existing terminal user turn and exclude the assistant candidate being
+   replaced from Planner history.
+2. The extension takes ownership of that candidate and immediately opens its
+   native assistant message or swipe slot.
 3. The extension reads the selected visible history, optional Summaryception,
    and, in preset context, enabled prompts from the current active preset.
 4. SillyTavern expands native macros in the literal custom Planner template and
@@ -33,10 +41,19 @@ One ordinary native SillyTavern Send runs one ordered operation:[^david-directio
    [Planner Request Contract](planner-request-contract.md).
 6. Normal Planner content streams into the native Planning disclosure. The
    Response does not start until nonblank Planning completes.
-7. SillyTavern assembles its normal active Response prompt. Exact Planning is
+7. Only after Planning completes, SillyTavern assembles the candidate's normal
+   active Response prompt. Exact Planning is
    appended as the final `system` message under every preset prompt.
 8. The chosen Response connection streams normal content into the same native
    assistant message and commits it once.
+
+The complete operation makes exactly two model requests: one Planner request
+and one Response request. Prompt assembly is local work and cannot make another
+model request.
+
+Planning and Response stream updates are coalesced to at most one DOM write per
+50 ms. Native Planning is finalized once. The extension does not install a
+chat-wide mutation observer.
 
 The Response request cannot begin before the Planner request completes with
 nonblank normal content. Exact Planner output is not parsed, summarized,
@@ -56,3 +73,4 @@ The exact visible behavior after a Response failure is owned by the accepted
 AGAPE Lite's warning message, anchored-planning swipe behavior, or retry rules.
 
 [^david-direction]: [David's simple Planner and Response direction](../sources/david-simple-planner-response-direction-2026-08-19.md)
+[^david-generation-candidate]: [David's generation candidate and performance correction](../sources/david-generation-candidate-performance-2026-08-20.md)

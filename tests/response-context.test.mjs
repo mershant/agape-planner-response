@@ -82,3 +82,25 @@ test('prompt capture mirrors native consecutive system-message squashing when en
   ]);
   assert.equal(called, true);
 });
+
+test('swipe Response prompt uses SillyTavern swipe assembly', async () => {
+  const eventSource = createEventSource();
+  let generatedType;
+  const context = {
+    mainApi: 'openai',
+    chat: [],
+    chatCompletionSettings: { squash_system_messages: false },
+    eventTypes: { CHAT_COMPLETION_PROMPT_READY: 'prompt' },
+    eventSource,
+    async generate(type) {
+      generatedType = type;
+      eventSource.emit('prompt', {
+        dryRun: true,
+        chat: [{ role: 'user', content: 'Current turn' }],
+      });
+    },
+  };
+
+  await captureNormalResponseMessages(context, undefined, 'swipe');
+  assert.equal(generatedType, 'swipe');
+});

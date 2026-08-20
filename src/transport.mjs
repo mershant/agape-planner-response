@@ -40,13 +40,13 @@ export async function consumeVisibleResponse(response, onText) {
       pending.push(text);
       continue;
     }
-    for (const pendingText of pending) await onText?.(pendingText);
+    for (const pendingText of pending) onText?.(pendingText);
     pending = [];
-    await onText?.(text);
+    onText?.(text);
   }
   text = requireVisibleText(text);
   throwIfTransportError(text);
-  for (const pendingText of pending) await onText?.(pendingText);
+  for (const pendingText of pending) onText?.(pendingText);
   return text;
 }
 

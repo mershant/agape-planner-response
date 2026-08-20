@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T11:24:52Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -24,6 +24,11 @@ sources:
   - id: david-planner-context
     resource: /sources/david-planner-context-contract-2026-08-20.md
     title: David's Planner context contract
+    author: human:david
+    last_modified: 2026-08-20
+  - id: david-generation-candidate
+    resource: /sources/david-generation-candidate-performance-2026-08-20.md
+    title: David's generation candidate and performance correction
     author: human:david
     last_modified: 2026-08-20
 ---
@@ -59,7 +64,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 32 deterministic tests pass.
+- **Automated tests:** 44 deterministic tests pass.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -69,6 +74,12 @@ not the new product foundation.
   Scylla credential. After aligning the Dev-owned binding, the snapshot tool
   activated the latest `Slave Market` chat and the exact FF5 MAX + Gemini 3.7
   Flash path completed live.
+- **Candidate and responsiveness proof:** normal, swipe, and regenerate each made
+  exactly one Planner request and one Response request. Normal opened its
+  candidate in 342 ms, first Planning arrived after 8.67 seconds of provider
+  latency, and the browser heartbeat's largest observed gap was 247 ms during a
+  full MAX run. Swipe added one swipe slot without adding a chat message;
+  regenerate replaced the candidate without changing chat length.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed
@@ -95,8 +106,9 @@ Each connection has one optional model override. When it is blank, a selected
 profile's own model is used. Direct custom API keys remain in SillyTavern's key
 store rather than extension settings.
 
-Normal SillyTavern Send starts the operation. A separate manual run path is not
-part of the current boundary. SillyTavern owns native macro expansion, profile
+Each normal, swipe, or regenerate assistant candidate starts one operation.
+Continue and quiet generations remain native and are not intercepted. A
+separate manual run path is not part of the current boundary. SillyTavern owns native macro expansion, profile
 and API transport, active preset assembly, Planning display, assistant-message
 display, and Stop.
 

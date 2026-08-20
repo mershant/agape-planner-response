@@ -4,7 +4,6 @@ import { rotateSecret, SECRET_KEYS, secret_state, writeSecret } from '/scripts/s
 
 import {
   createNativeMessage,
-  installPlanningHeaderObserver,
   recoverStalePendingMessage,
   refreshPlanningHeaders,
 } from './native-message.mjs';
@@ -15,6 +14,7 @@ import {
   collectPlannerHistory,
   extractSummaryceptionText,
 } from './planner-context.mjs';
+import { historyForGeneration, isPlannedGeneration } from './generation-candidate.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
 import { normalizeSettings } from './settings.mjs';
@@ -24,6 +24,7 @@ import { mountSettings } from './ui.mjs';
 const EXTENSION_KEY = 'agapePlannerResponse';
 let activeController = null;
 let ui = null;
+let regenerateSnapshot = null;
 
 const getContext = () => globalThis.SillyTavern.getContext();
 
@@ -49,8 +50,12 @@ function cleanResponse(text, final) {
   });
 }
 
-async function runOneSend(settings) {
+async function runOneCandidate(settings, generationType, previousCandidate = null) {
   const initialContext = getContext();
+  const plannerHistorySource = historyForGeneration(
+    initialContext.chat,
+    generationType,
+  );
   const controller = new AbortController();
   activeController = controller;
   const onStop = () => controller.abort(new DOMException('Generation aborted', 'AbortError'));
@@ -76,13 +81,20 @@ async function runOneSend(settings) {
               plannerTemplate: settings.plannerPrompt,
             })
             : [],
-          history: collectPlannerHistory(context.chat, plannerSettings),
+          history: collectPlannerHistory(
+            plannerHistorySource,
+            plannerSettings,
+          ),
           summaryception: plannerSettings.includeSummaryception
             ? extractSummaryceptionText(context.chatMetadata)
             : '',
         };
       },
-      createMessage: async () => createNativeMessage({ context: getContext() }),
+      createMessage: async () => createNativeMessage({
+        context: getContext(),
+        type: generationType,
+        previousCandidate,
+      }),
       requestPlanner: ({ stage, messages, signal, onText }) => {
         const context = getContext();
         return requestStage({
@@ -95,7 +107,7 @@ async function runOneSend(settings) {
           onText,
         });
       },
-      captureResponseMessages: async (stage, signal) => {
+      captureResponseMessages: async (stage, signal, nativeMessage) => {
         signal?.throwIfAborted?.();
         const context = getContext();
         if (context.mainApi !== 'openai') {
@@ -103,14 +115,18 @@ async function runOneSend(settings) {
         }
         responsePreset = responsePresetName(context);
         responseMaxTokens = maxTokens(context);
-        return captureNormalResponseMessages(context, async () => {
+        const responseGenerationType = generationType === 'swipe' ? 'swipe' : 'normal';
+        const capture = () => captureNormalResponseMessages(context, async () => {
           const completion = new ChatCompletion();
           completion.messages = clonePromptCollection(
             promptManager.getMessages?.() ?? promptManager.messages,
           );
           await completion.squashSystemMessages();
           return completion.getChat();
-        });
+        }, responseGenerationType);
+        return generationType === 'swipe'
+          ? capture()
+          : nativeMessage.withoutCandidate(capture);
       },
       requestResponse: ({ stage, messages, signal, onText }) => requestStage({
         context: getContext(),
@@ -133,7 +149,7 @@ async function runOneSend(settings) {
 }
 
 export async function generationInterceptor(_chat, _contextSize, abort, type) {
-  if (type !== 'normal') return;
+  if (!isPlannedGeneration(type)) return;
   const settings = currentSettings();
   if (!settings.enabled) return;
 
@@ -144,11 +160,13 @@ export async function generationInterceptor(_chat, _contextSize, abort, type) {
   }
 
   ui?.setStatus('Planning', 'busy');
+  const previousCandidate = type === 'regenerate' ? regenerateSnapshot : null;
+  regenerateSnapshot = null;
   try {
-    const result = await runOneSend(settings);
+    const result = await runOneCandidate(settings, type, previousCandidate);
     ui?.setStatus(result.stopped ? 'Stopped' : 'Complete', 'idle');
   } catch (error) {
-    console.error('[AGAPE Planner Response] Send failed.', error);
+    console.error('[AGAPE Planner Response] Generation failed.', error);
     ui?.setStatus('Failed', 'error');
     globalThis.toastr?.error(error.message || String(error), 'Planner Response');
   }
@@ -173,7 +191,12 @@ export async function initialize() {
     },
   });
   refreshPlanningHeaders(context);
-  installPlanningHeaderObserver(context);
+
+  context.eventSource.on(context.eventTypes.GENERATION_STARTED, (type, _options, dryRun) => {
+    if (type !== 'regenerate' || dryRun) return;
+    const last = getContext().chat.at(-1);
+    regenerateSnapshot = last?.is_user === false ? structuredClone(last) : null;
+  });
 
   for (const event of [
     context.eventTypes.CONNECTION_PROFILE_CREATED,
@@ -182,6 +205,15 @@ export async function initialize() {
     context.eventTypes.CONNECTION_PROFILE_LOADED,
   ]) {
     context.eventSource.on(event, () => ui?.refreshProfiles());
+  }
+  for (const event of [
+    context.eventTypes.MESSAGE_SWIPED,
+    context.eventTypes.CHARACTER_MESSAGE_RENDERED,
+  ]) {
+    context.eventSource.on(event, () => globalThis.setTimeout(
+      () => refreshPlanningHeaders(getContext()),
+      0,
+    ));
   }
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, () => {
     if (!activeController) {

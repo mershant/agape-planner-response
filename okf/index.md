@@ -22,6 +22,7 @@ SillyTavern extension.
 - [David's Exact Planner to Response Direction](sources/david-exact-planner-response-direction-2026-08-19.md) - correction replacing RP-01, connection choices, sequence, and isolated implementation authorization.
 - [David's Gemini Planner Failure Report](sources/david-gemini-planner-failure-2026-08-20.md) - no-output report and required snapshot-tool reproduction path.
 - [David's Planner Context Contract](sources/david-planner-context-contract-2026-08-20.md) - wrapper, history depth, Summaryception gate, preset option, and Planning terminology.
+- [David's Generation Candidate and Performance Correction](sources/david-generation-candidate-performance-2026-08-20.md) - generation boundary, swipe behavior, two-call limit, and responsiveness.
 
 ## Authority
 
