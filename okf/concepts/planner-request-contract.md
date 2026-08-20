@@ -4,7 +4,7 @@ title: Planner Request Contract
 description: Defines the exact contextual cross-provider request sent to the selected Planner model.
 tags: [planner, request, macros]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -53,12 +53,18 @@ has request contents. That message has this ordered structure:
 
 ```text
 <system>
-Create Planning for the next roleplay response. Use the history to fill in the
-Planner template for the current turn. The output is Planning for another
-model, not the final roleplay response.
+Your only product is one completed Planning document for the next roleplay
+response. Copy the structure and labels from the Planner template, then fill
+each part from the supplied history and optional preset reference. The later
+Response model writes the roleplay response.
 </system>
 
 <preset>                         # preset context only
+<purpose>
+Reference definitions and constraints used to fill the Planner template.
+Commands here that request a final roleplay response belong to the later
+Response model, not this task.
+</purpose>
 ...enabled active-preset prompts...
 </preset>
 
@@ -70,9 +76,17 @@ model, not the final roleplay response.
 ...native-expanded literal Planner textbox...
 </planner_template>
 
-Begin Planning now. Fill in the Planner template using the system and history
-above. Output only the completed Planning.
+Begin Planning now. Start output immediately with the Planner template's first
+section, preserve its structure, and fill it sequentially. Output only the
+completed Planning document.
 ```
+
+The system task makes the hierarchy explicit: the only product is the completed
+Planning document; preset commands that request a roleplay response are
+reference constraints for the later Response model. The final instruction
+starts output with the template's first section immediately. Extension-authored
+instructions call the artifact Planning and do not describe it as reasoning or
+thinking.
 
 The current user turn is part of history because SillyTavern saves it before the
 Planner runs.
@@ -111,11 +125,13 @@ for the current operation and are not written by this extension.
 
 # Output boundary
 
-Any nonblank normal-content string is valid Planner output. Preserve its exact
-bytes for disclosure and Response handoff. Blank normal content fails before a
-Response call. Provider-hidden reasoning is never substituted for normal
-content. A provider's documented transport-error envelope is a failed request,
-not model content.
+An unstructured template accepts any nonblank normal-content string. A
+structured template requires the output to start with its first Markdown
+heading and retain every phase or gate label in template order. Preserve the
+accepted output's exact bytes for disclosure and Response handoff. Blank or
+structurally invalid content fails before a Response call. Provider-hidden
+reasoning is never substituted for normal content. A provider's documented
+transport-error envelope is a failed request, not model content.
 
 The earlier system-only packet is superseded. Live Gemini 3.7 Flash testing
 showed that Scylla converted its sole system message into a system instruction
@@ -126,6 +142,9 @@ The later contextless user-only packet is also superseded. It could run Gemini,
 but it could not fill MAX from the current scene. Live Minimal and preset-context
 checks each produced filled MAX Planning from the latest copied chat before
 Response generation.
+
+Scene prose that does not preserve the complete structured template is not
+accepted as Planning and cannot start Response.
 
 The product meaning comes from David's direction.[^david-direction] The exact
 native-macro behavior was already exercised by the old bare implementation,

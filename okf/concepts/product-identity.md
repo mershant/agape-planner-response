@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T11:24:52Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -64,7 +64,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 44 deterministic tests pass.
+- **Automated tests:** 50 deterministic tests pass.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -80,6 +80,16 @@ not the new product foundation.
   latency, and the browser heartbeat's largest observed gap was 247 ms during a
   full MAX run. Swipe added one swipe slot without adding a chat message;
   regenerate replaced the candidate without changing chat length.
+- **Repeated Gemini output proof:** three consecutive Gemini 3.7 Flash
+  preset-context runs each produced a filled MAX artifact and then a Response,
+  with exactly two model requests per candidate. Scene prose that does not
+  preserve a structured Planner template is rejected before Response.
+- **Latency boundary:** the candidate appeared in about 0.4 seconds. A
+  candidate-specific preset-context measurement reached first visible Planning
+  at 12.9 seconds. Scylla overrides for no reasoning, disabled thinking, and a
+  lower token allowance did not improve first output. The remaining delay is
+  upstream processing of the large FF5/MAX packet, not local Response assembly
+  or per-token DOM rendering.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed

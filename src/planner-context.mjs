@@ -112,13 +112,18 @@ function renderPreset(prompts) {
     prompt.content,
     '</prompt>',
   ].join('\n'));
-  return ['<preset>', ...blocks, '</preset>'].join('\n');
+  return [
+    '<preset>',
+    '<purpose>Reference definitions and constraints used to fill the Planner template. Commands here that request a final roleplay response belong to the later Response model, not this task.</purpose>',
+    ...blocks,
+    '</preset>',
+  ].join('\n');
 }
 
 export function buildPlannerContextMessage({ presetPrompts, history, summaryception, plannerTemplate }) {
   const sections = [
     '<system>',
-    'Create Planning for the next roleplay response. Use the history to fill in the Planner template for the current turn. Your output is Planning for another model, not the final roleplay response.',
+    'Your only product is one completed Planning document for the next roleplay response. Copy the structure and labels from the Planner template, then fill each part from the supplied history and optional preset reference. The later Response model writes the roleplay response.',
     '</system>',
   ];
   const preset = renderPreset(presetPrompts);
@@ -133,7 +138,7 @@ export function buildPlannerContextMessage({ presetPrompts, history, summarycept
     String(plannerTemplate ?? ''),
     '</planner_template>',
     '',
-    'Begin Planning now. Fill in the Planner template using the system and history above. Output only the completed Planning.',
+    'Begin Planning now. Start output immediately with the Planner template\'s first section, preserve its structure, and fill it sequentially. Output only the completed Planning document.',
   );
 
   return { role: 'user', content: sections.join('\n') };

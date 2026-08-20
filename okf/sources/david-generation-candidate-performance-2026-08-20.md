@@ -4,7 +4,7 @@ title: David's Generation Candidate and Performance Correction
 description: Preserves the required generation boundary, swipe behavior, two-call limit, and responsiveness correction.
 tags: [source, david, generation, swipe, performance]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T11:24:52Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
 ---
 
 # Generation boundary and performance report
@@ -18,3 +18,10 @@ David directed the correction:
 David clarified the complete request limit:
 
 > it literally only needs two calls, one for planner and one for esponse THATS IT WTF
+
+# Gemini output and latency correction
+
+David reported that preset instructions could still win over the Planner task
+and reiterated the startup requirement:
+
+> did you not test it for gemini 3.7 flash? issue is, that it just outputs the response because it sees the preset's instructions. dont use words that suggest it's reasoning because it wont reason. + its still slow as fuck. there's no reason for the planner to take literally more than 5 seconds to start streaming. NO reason

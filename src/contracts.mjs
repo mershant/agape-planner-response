@@ -8,14 +8,22 @@ export function requireVisibleText(value) {
 }
 
 export function buildPlannerMessages(prompt, substituteParams, plannerContext = {}) {
+  return buildPlannerRequest(prompt, substituteParams, plannerContext).messages;
+}
+
+export function buildPlannerRequest(prompt, substituteParams, plannerContext = {}) {
   if (typeof substituteParams !== 'function') {
     throw new TypeError('SillyTavern substituteParams is required');
   }
   const expanded = substituteParams(String(prompt ?? ''));
-  return [buildPlannerContextMessage({
-    ...plannerContext,
-    plannerTemplate: requireVisibleText(expanded),
-  })];
+  const expandedTemplate = requireVisibleText(expanded);
+  return {
+    expandedTemplate,
+    messages: [buildPlannerContextMessage({
+      ...plannerContext,
+      plannerTemplate: expandedTemplate,
+    })],
+  };
 }
 
 export function appendPlanningToResponse(messages, planning) {

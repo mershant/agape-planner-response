@@ -1,9 +1,10 @@
 import {
   appendPlanningToResponse,
-  buildPlannerMessages,
+  buildPlannerRequest,
   requireVisibleText,
 } from './contracts.mjs';
 import { createThrottledUpdater } from './throttled-updater.mjs';
+import { requirePlanningArtifact } from './planning-artifact.mjs';
 
 export async function runPlannerResponse({
   settings,
@@ -17,10 +18,10 @@ export async function runPlannerResponse({
   signal,
   updateIntervalMs = 50,
 }) {
-  let plannerMessages;
+  let plannerRequest;
   try {
     const plannerContext = await collectPlannerContext(settings.planner);
-    plannerMessages = buildPlannerMessages(
+    plannerRequest = buildPlannerRequest(
       settings.plannerPrompt,
       substituteParams,
       plannerContext,
@@ -47,14 +48,14 @@ export async function runPlannerResponse({
     await nativeMessage.setPlanning('');
     const planning = await requestPlanner({
       stage: settings.planner,
-      messages: plannerMessages,
+      messages: plannerRequest.messages,
       signal,
       onText: (text) => {
         planningText = text;
         planningUpdates.schedule(text);
       },
     });
-    planningText = requireVisibleText(planning);
+    planningText = requirePlanningArtifact(planning, plannerRequest.expandedTemplate);
     await planningUpdates.flush(planningText);
     await nativeMessage.completePlanning(planningText);
     planningComplete = true;

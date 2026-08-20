@@ -56,9 +56,11 @@ Planning and Response stream updates are coalesced to at most one DOM write per
 chat-wide mutation observer.
 
 The Response request cannot begin before the Planner request completes with
-nonblank normal content. Exact Planner output is not parsed, summarized,
-rewritten, schema-validated, macro-expanded a second time, or replaced with
-provider-hidden reasoning.
+accepted Planning. Exact accepted Planning is not summarized, rewritten,
+macro-expanded a second time, or replaced with provider-hidden reasoning. A
+structured Planner template must preserve its heading and ordered section
+labels; this is the acceptance boundary that prevents a roleplay response from
+being misclassified as Planning.
 
 # Cancellation
 

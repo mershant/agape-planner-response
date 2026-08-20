@@ -86,10 +86,10 @@ test('Planner sees purpose, history, exact template, then the instruction to beg
   });
 
   assert.equal(message.role, 'user');
-  assert.match(message.content, /^<system>\nCreate Planning for the next roleplay response\./);
-  assert.match(message.content, /<\/system>\n\n<preset>\n<prompt role="system" name="NPC Voice">\n<npc_voice>Legato speech\.<\/npc_voice>\n<\/prompt>\n<\/preset>/);
+  assert.match(message.content, /^<system>\nYour only product is one completed Planning document/);
+  assert.match(message.content, /<\/system>\n\n<preset>\n<purpose>Reference definitions and constraints[\s\S]*<prompt role="system" name="NPC Voice">/);
   assert.match(message.content, /<history>[\s\S]*<summaryception>\nEarlier events summarized here\.[\s\S]*<message role="assistant" name="Narrator">\nOpening scene\.\n<\/message>/);
   assert.match(message.content, /<planner_template>\n# MAX Template\nGate 1\.\.\. \{\{literal-output\}\}\n<\/planner_template>/);
-  assert.match(message.content, /<\/planner_template>\n\nBegin Planning now\. Fill in the Planner template using the system and history above\. Output only the completed Planning\.$/);
+  assert.match(message.content, /<\/planner_template>\n\nBegin Planning now\. Start output immediately with the Planner template's first section/);
   assert.doesNotMatch(message.content, /never call it reasoning/i);
 });
