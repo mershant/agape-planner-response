@@ -7,7 +7,7 @@ import {
   requireVisibleText,
 } from '../src/contracts.mjs';
 
-test('Planner receives one native-expanded system message', () => {
+test('Planner receives one native-expanded user message so Gemini has request contents', () => {
   const calls = [];
   const messages = buildPlannerMessages('State: {{getvar::state}}', (prompt) => {
     calls.push(prompt);
@@ -15,7 +15,7 @@ test('Planner receives one native-expanded system message', () => {
   });
 
   assert.deepEqual(calls, ['State: {{getvar::state}}']);
-  assert.deepEqual(messages, [{ role: 'system', content: 'State: active' }]);
+  assert.deepEqual(messages, [{ role: 'user', content: 'State: active' }]);
 });
 
 test('Response keeps normal SillyTavern messages and receives exact Planning last', () => {

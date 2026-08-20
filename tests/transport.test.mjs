@@ -44,7 +44,7 @@ test('profile Planner uses one selected profile request without preset or instru
   const text = await requestStage({
     context,
     stage: { source: 'profile', profileId: '', model: '' },
-    messages: [{ role: 'system', content: 'Prompt' }],
+    messages: [{ role: 'user', content: 'Prompt' }],
     maxTokens: 700,
     includePreset: false,
     signal: new AbortController().signal,
@@ -53,7 +53,7 @@ test('profile Planner uses one selected profile request without preset or instru
   assert.equal(text, 'Planning');
   assert.deepEqual(calls, [[
     'active-profile',
-    [{ role: 'system', content: 'Prompt' }],
+    [{ role: 'user', content: 'Prompt' }],
     700,
     {
       stream: true,
@@ -85,7 +85,7 @@ test('direct custom API uses its URL, stored key id, and model', async () => {
       secretId: 'stored-key-id',
       model: 'custom-model',
     },
-    messages: [{ role: 'system', content: 'Prompt' }],
+    messages: [{ role: 'user', content: 'Prompt' }],
     maxTokens: 900,
     includePreset: false,
     presetName: 'Active RP',
@@ -168,7 +168,7 @@ test('current Chat Completion connection works without a saved Connection Manage
   await requestStage({
     context,
     stage: { source: 'profile', profileId: '', model: '' },
-    messages: [{ role: 'system', content: 'Planner' }],
+    messages: [{ role: 'user', content: 'Planner' }],
     maxTokens: 300,
     includePreset: false,
     signal: new AbortController().signal,

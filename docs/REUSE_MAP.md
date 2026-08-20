@@ -21,7 +21,7 @@ Useful checkpoints:
 |---|---|---|
 | Literal prompt persistence | `src/defaults.mjs`, `src/ui-controller.mjs` | Reimplement only the new settings keys and passive save behavior. |
 | Native macro expansion | `collectBareTurnSnapshot()` in `src/source-snapshot.mjs` | Call `context.substituteParams(prompt)` with normal/default behavior. Do not scan chat text. |
-| One Planner message | `buildBareShadowMessages()` in `src/shadow-prompt.mjs` | Recreate as a tiny pure packet builder. |
+| One Planner message | `buildBareShadowMessages()` in `src/shadow-prompt.mjs` | Recreate only the one-message shape. Use the accepted `user` role rather than the old Gemini-incompatible system-only role. |
 | Nonblank exact Planner output | `validateBarePlanningOutput()` in `src/planning-operation.mjs` | Recreate as a small visible-content check. |
 | Ordinary profile streaming | `streamProfileText()` in `src/profile-client.mjs` | Extract only the ordinary profile request shape and cumulative text handling. |
 | Native reasoning display | `src/native-reasoning-bridge.mjs` | Adapt the SillyTavern `ReasoningHandler` integration without render-lane metadata. |
@@ -51,7 +51,7 @@ fixtures and names:
 
 - `tests/settings.test.mjs`: literal prompt persistence;
 - `tests/ui-controller.test.mjs`: editing does not dispatch models;
-- `tests/shadow-prompt.test.mjs`: one exact Planner system message;
+- `tests/shadow-prompt.test.mjs`: one exact Planner user message;
 - `tests/source-snapshot.test.mjs`: native macro ownership and no chat scan;
 - `tests/planning-operation.test.mjs`: nonblank exact visible output;
 - `tests/profile-client.test.mjs`: ordinary profile request shape;

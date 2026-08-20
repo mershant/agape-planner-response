@@ -10,7 +10,7 @@ export function buildPlannerMessages(prompt, substituteParams) {
     throw new TypeError('SillyTavern substituteParams is required');
   }
   const expanded = substituteParams(String(prompt ?? ''));
-  return [{ role: 'system', content: requireVisibleText(expanded) }];
+  return [{ role: 'user', content: requireVisibleText(expanded) }];
 }
 
 export function appendPlanningToResponse(messages, planning) {

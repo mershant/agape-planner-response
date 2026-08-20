@@ -80,9 +80,11 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
   byId('agape-planner-prompt').value = settings.plannerPrompt;
   renderStage('planner');
   renderStage('response');
+  status.textContent = settings.enabled ? 'Ready' : 'Disabled';
 
   byId('agape-planner-response-enabled').addEventListener('change', (event) => {
     settings.enabled = event.currentTarget.checked;
+    status.textContent = settings.enabled ? 'Ready' : 'Disabled';
     persist();
   });
   byId('agape-planner-prompt').addEventListener('input', (event) => {

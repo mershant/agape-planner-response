@@ -2,6 +2,8 @@
 
 ## 2026-08-20
 
+- **Fix**: Changed the sole Planner message from `system` to `user` after reproducing Gemini 3.7 Flash's `contents is not specified` failure with the exact FF5 MAX prompt through Scylla.
+- **Live proof**: Activated the latest main-chat capsule through the `rp-prompting` snapshot tool and observed MAX Planning followed by the normal FF5 Response on Gemini 3.7 Flash.
 - **Release**: Published the live-proven extension at `https://github.com/mershant/agape-planner-response` for installation through SillyTavern's extension installer.
 
 ## 2026-08-19

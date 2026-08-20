@@ -1,10 +1,10 @@
 ---
 type: Model Request Contract
 title: Planner Request Contract
-description: Defines the exact bare request sent to the selected Planner model.
+description: Defines the exact bare cross-provider request sent to the selected Planner model.
 tags: [planner, request, macros]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -20,6 +20,11 @@ sources:
     title: David's exact Planner to Response direction
     author: human:david
     last_modified: 2026-08-19
+  - id: david-gemini-failure
+    resource: /sources/david-gemini-planner-failure-2026-08-20.md
+    title: David's Gemini Planner failure report
+    author: human:david
+    last_modified: 2026-08-20
 ---
 
 # Stored prompt
@@ -42,12 +47,14 @@ the Planner request. The Planner's output is not expanded again.
 
 # Exact Planner packet
 
-The selected Planner profile receives exactly one message:
+The selected Planner connection receives exactly one message. It uses the
+`user` role because the text is the complete task supplied to the Planner and
+because Gemini requires user content in addition to any system instruction:
 
 ```json
 [
   {
-    "role": "system",
+    "role": "user",
     "content": "<native-expanded custom Planner prompt>"
   }
 ]
@@ -77,6 +84,11 @@ bytes for disclosure and Response handoff. Blank normal content fails before a
 Response call. Provider-hidden reasoning is never substituted for normal
 content. A provider's documented transport-error envelope is a failed request,
 not model content.
+
+The earlier system-only packet is superseded. Live Gemini 3.7 Flash testing
+showed that Scylla converted its sole system message into a system instruction
+and rejected the request because no Gemini `contents` remained. The same exact
+MAX prompt succeeded as one user message.
 
 The product meaning comes from David's direction.[^david-direction] The exact
 native-macro behavior was already exercised by the old bare implementation,

@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
 ---
 
 # Evidence states
@@ -26,7 +26,7 @@ The suite must prove the exact current contracts:
 
 1. Settings save literal values without model calls.
 2. Planner macro expansion is delegated once to SillyTavern.
-3. Planner receives exactly its accepted request packet.
+3. Planner receives exactly one native-expanded `user` message.
 4. Blank Planner normal content prevents Response.
 5. Response receives the unchanged normal SillyTavern request plus exact
    Planning as its final `system` message.

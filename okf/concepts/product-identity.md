@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T07:53:49Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -16,6 +16,11 @@ sources:
     title: David's exact Planner to Response direction
     author: human:david
     last_modified: 2026-08-19
+  - id: david-gemini-failure
+    resource: /sources/david-gemini-planner-failure-2026-08-20.md
+    title: David's Gemini Planner failure report
+    author: human:david
+    last_modified: 2026-08-20
 ---
 
 # Product
@@ -42,7 +47,8 @@ not the new product foundation.
 - **Repository foundation:** written in the canonical workspace; strict OKF
   v0.2 validation passed with no issues.
 - **Exact Planner packet:** implemented, deterministically tested, and observed
-  live with a native variable expanded in its sole system message.
+  live with a native variable expanded in its sole user message. The exact FF5
+  MAX prompt produced visible Planning through Gemini 3.7 Flash on Scylla.
 - **Exact Response packet:** implemented, deterministically tested, and observed
   live as the normal preset/chat request followed by exact Planning as its final
   system message.
@@ -54,8 +60,10 @@ not the new product foundation.
   Response; both Stop phases, failure text, settings persistence, message
   persistence, packet ordering, profile preservation, and desktop/mobile drawer
   layout were observed. The latest main-chat capsule could not be activated
-  because Dev lacks its proxy password; the snapshot guard prevented a partial
-  or credential-copying activation, so live proof used Dev's Test Environment.
+  during initial proof because Dev's active API did not match its existing
+  Scylla credential. After aligning the Dev-owned binding, the snapshot tool
+  activated the latest `Slave Market` chat and the exact FF5 MAX + Gemini 3.7
+  Flash path completed live.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed

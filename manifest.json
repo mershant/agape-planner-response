@@ -1,7 +1,7 @@
 {
   "display_name": "AGAPE Planner Response",
   "manifest_version": 3,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Runs a custom Planner first, shows its output as native reasoning, then gives that Planning to the normal SillyTavern Response prompt.",
   "js": "index.js",
   "css": "style.css",
