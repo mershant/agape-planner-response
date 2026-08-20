@@ -15,10 +15,8 @@ implementation status. Do not copy its status into this file or infer later
 status from files that happen to exist.
 
 `okf/concepts/response-request-contract.md` is the single owner of the exact
-Planner-to-Response packet. Its current candidate is not approved. Do not add
-runtime code until David approves that complete contract or supplies a
-replacement and then separately directs runtime implementation. A contract
-decision is not an implementation command.
+Planner-to-Response packet. Follow its accepted relationship; do not infer a
+different packet from AGAPE Lite or an earlier proposal.
 
 ## Canonical workspace
 

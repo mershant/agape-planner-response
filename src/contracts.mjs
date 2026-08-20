@@ -1,0 +1,24 @@
+export function requireVisibleText(value) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error('Model returned blank visible content');
+  }
+  return value;
+}
+
+export function buildPlannerMessages(prompt, substituteParams) {
+  if (typeof substituteParams !== 'function') {
+    throw new TypeError('SillyTavern substituteParams is required');
+  }
+  const expanded = substituteParams(String(prompt ?? ''));
+  return [{ role: 'system', content: requireVisibleText(expanded) }];
+}
+
+export function appendPlanningToResponse(messages, planning) {
+  if (!Array.isArray(messages)) {
+    throw new TypeError('Normal SillyTavern Response messages are required');
+  }
+  return [
+    ...structuredClone(messages),
+    { role: 'system', content: requireVisibleText(planning) },
+  ];
+}

@@ -1,73 +1,63 @@
 ---
 type: Model Request Contract
 title: Response Request Contract
-description: Owns the proposed exact Planner-to-Response packet and approval gate.
-tags: [response, request, approval-required]
-status: draft
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T11:17:14Z }
+description: Owns the accepted normal SillyTavern Response prompt with exact Planning last.
+tags: [response, request, active-preset]
+status: stable
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
     title: David's simple Planner and Response direction
     author: human:david
     last_modified: 2026-08-19
+  - id: david-exact-direction
+    resource: /sources/david-exact-planner-response-direction-2026-08-19.md
+    title: David's exact Planner to Response direction
+    author: human:david
+    last_modified: 2026-08-19
 ---
 
-# Current approved boundary
+# Accepted relationship
 
-The Response model follows the Planner in the same native Send operation and
-produces the visible assistant response.[^david-direction]
+The Response is an ordinary SillyTavern roleplay generation that follows visible
+Planning in the same native Send operation.[^david-exact-direction]
 
-The exact request packet is not yet approved. No runtime implementation may
-infer it from AGAPE Lite or treat the candidate below as current authority.
+SillyTavern first assembles the normal Chat Completion request from the current
+chat, character, persona, lore, active preset, enabled prompt blocks, and other
+native context. The extension then appends exactly one final message:
 
-# RP-01 proposed complete contract
-
-State: **proposed, awaiting David's explicit approval or replacement**. No
-field below is approved merely because it appears in this candidate.
-
-```json
-[
-  {
-    "role": "system",
-    "content": "<exact Planner normal-content output>"
-  }
-]
+```jsonc
+// existing normal SillyTavern messages remain unchanged, followed by:
+{
+  "role": "system",
+  "content": "<exact Planner normal-content output>"
+}
 ```
 
-The proposed JSON and every row below are one contract:
+That final content is not macro-expanded, parsed, summarized, wrapped, labeled,
+or rewritten. It is the last prompt message the Response model sees.
 
-| Choice | RP-01 proposal |
+# Complete contract
+
+| Choice | Accepted behavior |
 |---|---|
-| Planner output placement | Exact Planner normal content is the sole `system` message. |
+| Planner output placement | Exact Planner normal content is the final `system` message after the complete normal SillyTavern request. |
 | Additional instructions | None. |
-| Conversation history | None. |
-| Current user message | No separate message; any needed input must already have reached Planner through the user-authored prompt and native macros. |
-| Response profile preset | Excluded. |
-| Instruct template | Excluded. |
-| Completion transport | SillyTavern chooses chat or text completion from the selected profile. |
-| Token handling | The extension supplies no private cap or override; SillyTavern's selected-profile transport owns its normal allowance. |
+| Conversation history and current user message | Included normally by SillyTavern. |
+| Response preset | The user's active preset is the default. A selected Response profile applies for that Send without becoming the user's lasting selection. |
+| Completion transport | Chat Completion first. Use the current or selected profile, or direct custom API. |
+| Model | One optional Response model override; otherwise use the connection profile's model. |
+| Token handling | Use the selected Response preset's normal allowance. |
 | Streaming | Stream ordinary visible content. |
-| Output acceptance | Any nonblank normal-content string; preserve exact content. |
-| Native placement | Planner output in native reasoning and Response output in the same native assistant message. |
-| Provider-hidden reasoning | Never substitute it for normal Response content. |
+| Output acceptance | Any nonblank normal model content; preserve exact content. A provider's documented transport-error envelope remains a failed request. |
+| Native placement | Planner output completes in native reasoning before Response text begins in the same assistant message. |
+| Provider-hidden reasoning | Never replace or overwrite Planner output with Response-provider hidden reasoning. |
 | Stop | Abort the active Response request through the operation's single signal. |
 | Failure after Planning | Keep the assistant shell and set its visible text exactly to `Response failed.`; add no retry or swipe behavior. |
 
-# Approval gate
-
-Before runtime work, show RP-01's JSON and complete table to David. David may:
-
-- approve `RP-01`;
-- replace one or more exact fields;
-- reject it and supply another relationship.
-
-Approving `RP-01` means approving the JSON and every table row. A partial
-answer changes only the named fields and leaves the complete contract
-unapproved. Record the decision in a source note, then update this concept to
-contain one accepted contract.
-
-Even complete contract approval does not start runtime implementation. David
-must separately direct that work.
+RP-01 is superseded. It incorrectly made Planning the whole Response request
+and excluded the normal preset and chat.
 
 [^david-direction]: [David's simple Planner and Response direction](../sources/david-simple-planner-response-direction-2026-08-19.md)
+[^david-exact-direction]: [David's exact Planner to Response direction](../sources/david-exact-planner-response-direction-2026-08-19.md)

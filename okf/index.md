@@ -19,6 +19,7 @@ SillyTavern extension.
 ## Current source
 
 - [David's Simple Planner and Response Direction](sources/david-simple-planner-response-direction-2026-08-19.md) - preserved product wording, repository choices, and authorization.
+- [David's Exact Planner to Response Direction](sources/david-exact-planner-response-direction-2026-08-19.md) - correction replacing RP-01, connection choices, sequence, and isolated implementation authorization.
 
 ## Authority
 

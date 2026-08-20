@@ -1,0 +1,72 @@
+<div id="agape-planner-response-settings" class="agape-pr">
+  <div class="inline-drawer">
+    <div class="inline-drawer-toggle inline-drawer-header">
+      <b>AGAPE Planner Response</b>
+      <span id="agape-planner-response-status" class="agape-pr__status" data-state="idle">Ready</span>
+      <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    </div>
+    <div class="inline-drawer-content">
+      <label class="checkbox_label" for="agape-planner-response-enabled">
+        <input id="agape-planner-response-enabled" type="checkbox">
+        <span><strong>Run Planner before normal Send</strong></span>
+      </label>
+
+      <label for="agape-planner-prompt"><strong>Planner prompt</strong></label>
+      <textarea id="agape-planner-prompt" class="text_pole agape-pr__prompt" rows="18" spellcheck="false" placeholder="Write the complete prompt for the Planner. Native SillyTavern macros and variables are expanded when Send begins."></textarea>
+      <small>Saved literally. The Planner receives this prompt alone. Its output appears in the native reasoning box before Response starts.</small>
+
+      <section class="agape-pr__stage" aria-labelledby="agape-planner-heading">
+        <h4 id="agape-planner-heading">Planner connection</h4>
+        <label for="agape-planner-source">Connection source</label>
+        <select id="agape-planner-source" class="text_pole">
+          <option value="profile">SillyTavern connection profile</option>
+          <option value="custom">Direct custom API</option>
+        </select>
+        <div data-stage-panel="planner-profile">
+          <label for="agape-planner-profile">Profile</label>
+          <select id="agape-planner-profile" class="text_pole"></select>
+        </div>
+        <div data-stage-panel="planner-custom" hidden>
+          <label for="agape-planner-custom-url">Custom API URL</label>
+          <input id="agape-planner-custom-url" class="text_pole" type="url" placeholder="https://example.com/v1">
+          <label for="agape-planner-api-key">API key</label>
+          <div class="agape-pr__key-row">
+            <input id="agape-planner-api-key" class="text_pole" type="password" autocomplete="new-password" placeholder="Stored in SillyTavern, never extension settings">
+            <button id="agape-planner-save-key" class="menu_button" type="button">Save key</button>
+            <button id="agape-planner-forget-key" class="menu_button" type="button">Forget key</button>
+          </div>
+          <small id="agape-planner-key-state"></small>
+        </div>
+        <label for="agape-planner-model">Model override</label>
+        <input id="agape-planner-model" class="text_pole" type="text" placeholder="Blank uses the profile model">
+      </section>
+
+      <section class="agape-pr__stage" aria-labelledby="agape-response-heading">
+        <h4 id="agape-response-heading">Response connection</h4>
+        <label for="agape-response-source">Connection source</label>
+        <select id="agape-response-source" class="text_pole">
+          <option value="profile">SillyTavern connection profile</option>
+          <option value="custom">Direct custom API</option>
+        </select>
+        <div data-stage-panel="response-profile">
+          <label for="agape-response-profile">Profile</label>
+          <select id="agape-response-profile" class="text_pole"></select>
+        </div>
+        <div data-stage-panel="response-custom" hidden>
+          <label for="agape-response-custom-url">Custom API URL</label>
+          <input id="agape-response-custom-url" class="text_pole" type="url" placeholder="https://example.com/v1">
+          <label for="agape-response-api-key">API key</label>
+          <div class="agape-pr__key-row">
+            <input id="agape-response-api-key" class="text_pole" type="password" autocomplete="new-password" placeholder="Stored in SillyTavern, never extension settings">
+            <button id="agape-response-save-key" class="menu_button" type="button">Save key</button>
+            <button id="agape-response-forget-key" class="menu_button" type="button">Forget key</button>
+          </div>
+          <small id="agape-response-key-state"></small>
+        </div>
+        <label for="agape-response-model">Model override</label>
+        <input id="agape-response-model" class="text_pole" type="text" placeholder="Blank uses the profile model">
+        <small>The current profile and preset are used by default. A selected profile applies only while that Send runs.</small>
+      </section>
+    </div>
+  </div>
+</div>

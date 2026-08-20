@@ -4,11 +4,16 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T11:17:14Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
     title: David's simple Planner and Response direction
+    author: human:david
+    last_modified: 2026-08-19
+  - id: david-exact-direction
+    resource: /sources/david-exact-planner-response-direction-2026-08-19.md
+    title: David's exact Planner to Response direction
     author: human:david
     last_modified: 2026-08-19
 ---
@@ -23,6 +28,7 @@ native SillyTavern Send
 -> user-authored custom Planner prompt
 -> Planner model
 -> exact visible Planner output
+-> normal SillyTavern Response prompt with Planning last
 -> Response model
 -> visible native assistant response
 ```
@@ -35,34 +41,51 @@ not the new product foundation.
 
 - **Repository foundation:** written in the canonical workspace; strict OKF
   v0.2 validation passed with no issues.
-- **Exact Planner packet:** specified from the previously approved bare Planner behavior; not implemented in this repository.
-- **Exact Response packet:** proposed but not approved.
-- **Runtime extension:** not started; requires exact Response contract approval
-  and a separate implementation directive from David.
-- **Automated tests:** not started.
-- **Live SillyTavern Dev proof:** not started.
+- **Exact Planner packet:** implemented, deterministically tested, and observed
+  live with a native variable expanded in its sole system message.
+- **Exact Response packet:** implemented, deterministically tested, and observed
+  live as the normal preset/chat request followed by exact Planning as its final
+  system message.
+- **Runtime extension:** written and loaded from the canonical repository into
+  isolated SillyTavern Dev.
+- **Automated tests:** 26 deterministic tests pass.
+- **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
+  and direct-custom transports; one assistant message retained Planning and
+  Response; both Stop phases, failure text, settings persistence, message
+  persistence, packet ordering, profile preservation, and desktop/mobile drawer
+  layout were observed. The latest main-chat capsule could not be activated
+  because Dev lacks its proxy password; the snapshot guard prevented a partial
+  or credential-copying activation, so live proof used Dev's Test Environment.
 - **Acceptance and release:** not granted.
 
 Only this section owns changing implementation and acceptance status.
 
 # Current boundary
 
-This concept owns the extension's one enable switch and three configuration
-values:
+This concept owns the extension's one enable switch, literal Planner prompt,
+and two model connections:
 
 - enable or disable;
-- Planner connection profile;
-- Response connection profile;
+- Planner connection: current or selected SillyTavern profile, or direct custom
+  Chat Completion API;
+- Response connection: current or selected SillyTavern profile, or direct
+  custom Chat Completion API;
 - literal custom Planner prompt.
 
+Each connection has one optional model override. When it is blank, a selected
+profile's own model is used. Direct custom API keys remain in SillyTavern's key
+store rather than extension settings.
+
 Normal SillyTavern Send starts the operation. A separate manual run path is not
-part of the current boundary. SillyTavern owns native macro expansion, selected
-profile transport, reasoning display, assistant-message display, and Stop.
+part of the current boundary. SillyTavern owns native macro expansion, profile
+and API transport, active preset assembly, reasoning display, assistant-message
+display, and Stop.
 
 The exact Planner request is owned by
 [Planner Request Contract](planner-request-contract.md). The exact handoff is
-owned by [Response Request Contract](response-request-contract.md) and must not
-be inferred from AGAPE Lite's old CHATTER path.
+owned by [Response Request Contract](response-request-contract.md). RP-01 and
+AGAPE Lite's old CHATTER path are superseded because both exclude the ordinary
+active SillyTavern Response prompt.
 
 # Excluded architecture
 

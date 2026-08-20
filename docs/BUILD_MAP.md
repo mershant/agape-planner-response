@@ -13,14 +13,13 @@ they are not fixed before the smallest correct seams are known.
 
 ## Stage 1: Contract decision
 
-1. Show David the exact proposed Response request in
-   [`response-request-contract.md`](../okf/concepts/response-request-contract.md).
-2. Record approval or replacement wording in a source note.
-3. Update that concept so there is one accepted packet and no competing copy.
-4. Update the product identity's implementation state.
+This stage was completed when David replaced RP-01 with the normal
+SillyTavern Response prompt plus exact Planning as its final message. The
+accepted relationship is owned by
+[`response-request-contract.md`](../okf/concepts/response-request-contract.md).
 
-No runtime file is created before this stage is accepted. Contract approval
-does not start Stage 2; David must separately direct runtime implementation.
+The later runtime directive is preserved in the current source note. This map
+does not grant authority for future additions.
 
 ## Stage 2: Pure packet and settings code
 

@@ -4,7 +4,7 @@ title: SillyTavern Integration
 description: Defines native host ownership and the isolated development environment.
 tags: [sillytavern, integration, development]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T11:17:14Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -30,13 +30,17 @@ run trigger; no separate Plan-only or manual-run button is currently defined.
 Use SillyTavern's own services for:
 
 - `substituteParams` macro expansion;
-- connection-profile selection and request transport;
+- connection-profile and direct custom Chat Completion transport;
+- active preset and ordinary Response prompt assembly;
 - native reasoning display for Planner output;
 - assistant shell, streaming update, and final reply persistence;
 - generation Stop and host-generation interception.
 
 The extension must not imitate these features with a second macro parser,
-standalone message store, or competing response UI.
+standalone message store, competing response UI, or raw credential store.
+
+Direct custom API keys are written to SillyTavern's existing key store. The
+extension persists only the returned key identifier, endpoint, and model.
 
 # Development isolation
 

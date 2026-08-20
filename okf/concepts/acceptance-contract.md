@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T11:17:14Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
 ---
 
 # Evidence states
@@ -28,10 +28,12 @@ The suite must prove the exact current contracts:
 2. Planner macro expansion is delegated once to SillyTavern.
 3. Planner receives exactly its accepted request packet.
 4. Blank Planner normal content prevents Response.
-5. Response receives exactly its accepted request packet.
+5. Response receives the unchanged normal SillyTavern request plus exact
+   Planning as its final `system` message.
 6. A successful native Send makes exactly one Planner request and one Response
    request; no failure or cancellation path makes more than one of either.
-7. Planner output and Response output retain their approved native placement.
+7. Visible Planning completes in native reasoning before Response text begins
+   in the same assistant message.
 8. Stop cancels the active model and prevents later stages.
 9. Host generation cannot create a duplicate assistant response.
 10. Failure behavior matches the approved contract.
@@ -43,7 +45,8 @@ Use only `/home/opc/SillyTavern-Dev` and its isolated data root. Observe:
 1. the extension loads after an ordinary browser refresh;
 2. literal prompt and profile settings persist;
 3. a normal Send produces visible Planning followed by one assistant response;
-4. packet inspection matches both accepted request contracts;
+4. packet inspection shows native Planner macro values and exact Planning as
+   the final Response message beneath all active preset prompts;
 5. Stop during Planner and Stop during Response each cancel cleanly;
 6. no request or file touches David's main SillyTavern.
 
