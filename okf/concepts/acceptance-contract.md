@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
 ---
 
 # Evidence states
@@ -26,13 +26,15 @@ The suite must prove the exact current contracts:
 
 1. Settings save literal values without model calls.
 2. Planner macro expansion is delegated once to SillyTavern.
-3. Planner receives exactly one native-expanded `user` message.
+3. Planner receives exactly one contextual `user` message with task, optional
+   preset, selected history, Planner template, and start-Planning instruction in
+   the accepted order.
 4. Blank Planner normal content prevents Response.
 5. Response receives the unchanged normal SillyTavern request plus exact
    Planning as its final `system` message.
 6. A successful native Send makes exactly one Planner request and one Response
    request; no failure or cancellation path makes more than one of either.
-7. Visible Planning completes in native reasoning before Response text begins
+7. Visible Planning completes in the native Planning disclosure before Response text begins
    in the same assistant message.
 8. Stop cancels the active model and prevents later stages.
 9. Host generation cannot create a duplicate assistant response.

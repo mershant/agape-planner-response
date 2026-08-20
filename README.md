@@ -4,14 +4,18 @@ This repository is the clean transfer target for a small SillyTavern extension:
 
 ```text
 native SillyTavern Send
--> custom Planner prompt
--> Planner output in native reasoning
+-> custom Planner template
+-> Planner output in native Planning
 -> normal active preset and chat with Planning last
 -> selected Response connection
 -> visible assistant response
 ```
 
 It does not inherit AGAPE Lite's abandoned Planner architecture.
+
+The Planner can use Minimal context or copy the enabled prompts from the current
+active preset into one `<preset>` block. History can be full or depth-limited.
+Summaryception can be included only with full history.
 
 ## Install
 
@@ -23,7 +27,7 @@ https://github.com/mershant/agape-planner-response
 
 After installation, reload SillyTavern and configure **AGAPE Planner Response**
 in the Extensions settings drawer. The extension starts disabled until it has
-a Planner prompt and connections configured.
+a Planner template and connections configured.
 
 ## Read first
 

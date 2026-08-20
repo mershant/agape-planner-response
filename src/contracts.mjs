@@ -1,3 +1,5 @@
+import { buildPlannerContextMessage } from './planner-context.mjs';
+
 export function requireVisibleText(value) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error('Model returned blank visible content');
@@ -5,12 +7,15 @@ export function requireVisibleText(value) {
   return value;
 }
 
-export function buildPlannerMessages(prompt, substituteParams) {
+export function buildPlannerMessages(prompt, substituteParams, plannerContext = {}) {
   if (typeof substituteParams !== 'function') {
     throw new TypeError('SillyTavern substituteParams is required');
   }
   const expanded = substituteParams(String(prompt ?? ''));
-  return [{ role: 'user', content: requireVisibleText(expanded) }];
+  return [buildPlannerContextMessage({
+    ...plannerContext,
+    plannerTemplate: requireVisibleText(expanded),
+  })];
 }
 
 export function appendPlanningToResponse(messages, planning) {

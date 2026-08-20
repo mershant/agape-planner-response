@@ -24,7 +24,7 @@ Useful checkpoints:
 | One Planner message | `buildBareShadowMessages()` in `src/shadow-prompt.mjs` | Recreate only the one-message shape. Use the accepted `user` role rather than the old Gemini-incompatible system-only role. |
 | Nonblank exact Planner output | `validateBarePlanningOutput()` in `src/planning-operation.mjs` | Recreate as a small visible-content check. |
 | Ordinary profile streaming | `streamProfileText()` in `src/profile-client.mjs` | Extract only the ordinary profile request shape and cumulative text handling. |
-| Native reasoning display | `src/native-reasoning-bridge.mjs` | Adapt the SillyTavern `ReasoningHandler` integration without render-lane metadata. |
+| Native Planning display | `src/native-reasoning-bridge.mjs` | Adapt SillyTavern's disclosure integration without render-lane metadata. |
 | Native assistant commit | `src/native-message-transaction.mjs` | Rebuild the shell, stream, commit, rollback, and ownership checks without anchors or legacy records. |
 | Native Send interception | SillyTavern's current extension API; old `src/runtime.mjs` only as evidence that interception is possible | Design fresh around saved-user-turn ownership, host abort, active cancellation, and one operation. Do not copy the old normal-run path. |
 
@@ -33,7 +33,9 @@ Useful checkpoints:
 Do not copy or revive:
 
 - the L0-L8 Planner scaffold;
-- EGO, skills, lore, Summaryception, or source-preset compilation;
+- the old EGO, skills, lore, Summaryception-retrieval instructions, or
+  source-preset compiler; the new extension only reads the bounded active-preset
+  and Summaryception context required by the current contract;
 - `/self` and `/selfq` modes;
 - `buildShadowMessages()` and its old prompt sources;
 - `validatePlanningBrief()` or `extractRendererScope()`;

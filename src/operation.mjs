@@ -7,6 +7,7 @@ import {
 export async function runPlannerResponse({
   settings,
   substituteParams,
+  collectPlannerContext = async () => ({}),
   createMessage,
   requestPlanner,
   captureResponseMessages,
@@ -14,7 +15,12 @@ export async function runPlannerResponse({
   cleanResponse,
   signal,
 }) {
-  const plannerMessages = buildPlannerMessages(settings.plannerPrompt, substituteParams);
+  const plannerContext = await collectPlannerContext(settings.planner);
+  const plannerMessages = buildPlannerMessages(
+    settings.plannerPrompt,
+    substituteParams,
+    plannerContext,
+  );
   const normalMessages = await captureResponseMessages(settings.response, signal);
   signal?.throwIfAborted?.();
   const nativeMessage = await createMessage();

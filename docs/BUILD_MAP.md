@@ -53,7 +53,7 @@ Add the smallest native transaction that:
 
 - starts only after the saved terminal user message is identified;
 - opens one assistant message shell;
-- shows Planner output in SillyTavern's native reasoning display;
+- shows Planner output in SillyTavern's native Planning disclosure;
 - streams Response text into the same assistant message;
 - commits the final Response once;
 - removes the provisional shell if Planner fails before handoff;

@@ -2,9 +2,19 @@ import { cleanUpMessage } from '/script.js';
 import { ChatCompletion, promptManager, proxies } from '/scripts/openai.js';
 import { rotateSecret, SECRET_KEYS, secret_state, writeSecret } from '/scripts/secrets.js';
 
-import { createNativeMessage, recoverStalePendingMessage } from './native-message.mjs';
+import {
+  createNativeMessage,
+  installPlanningHeaderObserver,
+  recoverStalePendingMessage,
+  refreshPlanningHeaders,
+} from './native-message.mjs';
 import { saveCustomSecret } from './custom-secret.mjs';
 import { runPlannerResponse } from './operation.mjs';
+import {
+  collectActivePresetPrompts,
+  collectPlannerHistory,
+  extractSummaryceptionText,
+} from './planner-context.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
 import { normalizeSettings } from './settings.mjs';
@@ -52,6 +62,26 @@ async function runOneSend(settings) {
     return await runPlannerResponse({
       settings,
       substituteParams: (prompt) => getContext().substituteParams(prompt),
+      collectPlannerContext: async (plannerSettings) => {
+        const context = getContext();
+        const promptOrder = promptManager.getPromptOrderForCharacter?.(
+          promptManager.activeCharacter,
+        ) ?? [];
+        return {
+          presetPrompts: plannerSettings.contextMode === 'preset'
+            ? collectActivePresetPrompts({
+              prompts: context.chatCompletionSettings?.prompts,
+              promptOrder,
+              substituteParams: (prompt) => context.substituteParams(prompt),
+              plannerTemplate: settings.plannerPrompt,
+            })
+            : [],
+          history: collectPlannerHistory(context.chat, plannerSettings),
+          summaryception: plannerSettings.includeSummaryception
+            ? extractSummaryceptionText(context.chatMetadata)
+            : '',
+        };
+      },
       createMessage: async () => createNativeMessage({ context: getContext() }),
       requestPlanner: ({ stage, messages, signal, onText }) => {
         const context = getContext();
@@ -142,6 +172,8 @@ export async function initialize() {
       });
     },
   });
+  refreshPlanningHeaders(context);
+  installPlanningHeaderObserver(context);
 
   for (const event of [
     context.eventTypes.CONNECTION_PROFILE_CREATED,
@@ -152,9 +184,13 @@ export async function initialize() {
     context.eventSource.on(event, () => ui?.refreshProfiles());
   }
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, () => {
-    if (!activeController) recoverStalePendingMessage(getContext()).catch((error) => {
-      console.error('[AGAPE Planner Response] Could not remove a stale assistant message.', error);
-    });
+    if (!activeController) {
+      recoverStalePendingMessage(getContext()).then(() => {
+        globalThis.setTimeout(() => refreshPlanningHeaders(getContext()), 0);
+      }).catch((error) => {
+        console.error('[AGAPE Planner Response] Could not recover a stale assistant message.', error);
+      });
+    }
   });
 }
 

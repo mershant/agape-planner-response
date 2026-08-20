@@ -74,6 +74,15 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     root.querySelector(`[data-stage-panel="${stageName}-custom"]`).hidden = stage.source !== 'custom';
     const keyState = byId(`${prefix}-key-state`);
     keyState.textContent = stage.secretId ? 'API key saved in SillyTavern' : 'No saved API key (keyless is allowed)';
+    if (stageName === 'planner') {
+      byId('agape-planner-context-mode').value = stage.contextMode;
+      byId('agape-planner-history-mode').value = stage.historyMode;
+      byId('agape-planner-history-depth').value = String(stage.historyDepth);
+      root.querySelector('[data-stage-panel="planner-history-depth"]').hidden = stage.historyMode !== 'depth';
+      const summaryception = byId('agape-planner-summaryception');
+      summaryception.checked = stage.includeSummaryception;
+      summaryception.disabled = stage.historyMode !== 'full';
+    }
   }
 
   byId('agape-planner-response-enabled').checked = settings.enabled;
@@ -140,6 +149,31 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
       renderStage(stageName);
     });
   }
+
+  byId('agape-planner-history-mode').addEventListener('change', (event) => {
+    settings.planner.historyMode = event.currentTarget.value;
+    if (settings.planner.historyMode === 'depth') {
+      settings.planner.includeSummaryception = false;
+    }
+    persist();
+    renderStage('planner');
+  });
+  byId('agape-planner-context-mode').addEventListener('change', (event) => {
+    settings.planner.contextMode = event.currentTarget.value;
+    persist();
+    renderStage('planner');
+  });
+  byId('agape-planner-history-depth').addEventListener('input', (event) => {
+    settings.planner.historyDepth = event.currentTarget.valueAsNumber;
+    persist();
+    renderStage('planner');
+  });
+  byId('agape-planner-summaryception').addEventListener('change', (event) => {
+    settings.planner.includeSummaryception = settings.planner.historyMode === 'full'
+      && event.currentTarget.checked;
+    persist();
+    renderStage('planner');
+  });
 
   const controller = {
     getSettings: () => normalizeSettings(settings),

@@ -1,10 +1,10 @@
 ---
 type: Model Request Contract
 title: Planner Request Contract
-description: Defines the exact bare cross-provider request sent to the selected Planner model.
+description: Defines the exact contextual cross-provider request sent to the selected Planner model.
 tags: [planner, request, macros]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -25,15 +25,16 @@ sources:
     title: David's Gemini Planner failure report
     author: human:david
     last_modified: 2026-08-20
+  - id: david-planner-context
+    resource: /sources/david-planner-context-contract-2026-08-20.md
+    title: David's Planner context contract
+    author: human:david
+    last_modified: 2026-08-20
 ---
 
-# Stored prompt
+# Stored template
 
-This contract transfers the bare Planner piece David referred to as already
-available. It defines the new repository's target behavior, but it does not
-claim that behavior has been implemented here.
-
-The extension stores the custom Planner prompt literally. Saving it does not
+The extension stores the custom Planner template literally. Saving it does not
 call either model.
 
 At operation time, the extension passes the literal prompt to SillyTavern's
@@ -45,24 +46,55 @@ This native expansion includes SillyTavern variables and macros such as
 `{{getvar::...}}`, `{{roll::...}}`, and `{{trim}}`. Expansion occurs once before
 the Planner request. The Planner's output is not expanded again.
 
-# Exact Planner packet
+# Planner context
 
-The selected Planner connection receives exactly one message. It uses the
-`user` role because the text is the complete task supplied to the Planner and
-because Gemini requires user content in addition to any system instruction:
+The selected Planner connection receives exactly one `user` message so Gemini
+has request contents. That message has this ordered structure:
 
-```json
-[
-  {
-    "role": "user",
-    "content": "<native-expanded custom Planner prompt>"
-  }
-]
+```text
+<system>
+Create Planning for the next roleplay response. Use the history to fill in the
+Planner template for the current turn. The output is Planning for another
+model, not the final roleplay response.
+</system>
+
+<preset>                         # preset context only
+...enabled active-preset prompts...
+</preset>
+
+<history>
+...optional Summaryception, then selected visible conversation messages...
+</history>
+
+<planner_template>
+...native-expanded literal Planner textbox...
+</planner_template>
+
+Begin Planning now. Fill in the Planner template using the system and history
+above. Output only the completed Planning.
 ```
 
-No current user message, history, character card, persona, lore, skill,
-Summaryception result, product prompt, preset content, or old Planner source is
-added as another message.
+The current user turn is part of history because SillyTavern saves it before the
+Planner runs.
+
+# Context choices
+
+- **Minimal context:** system task, selected history, optional Summaryception,
+  Planner template, then the instruction to begin Planning.
+- **Current active preset context:** the same packet with every enabled,
+  non-empty active-preset prompt added inside one `<preset>` block. Structural
+  placeholders are omitted because history is supplied by `<history>`. A preset
+  prompt identical to the Planner textbox is omitted so the template has one
+  authoritative location.
+- **Full history:** every visible user and assistant message in order.
+- **Recent messages:** the last configured number of visible messages in order;
+  zero supplies an empty history.
+- **Summaryception:** optional only with full history. Its promoted oldest layer
+  is rendered first and live layer last. It is unavailable in recent-message
+  mode.
+
+Saving settings never calls either model. History and Summaryception are read
+for the current operation and are not written by this extension.
 
 # Transport boundary
 
@@ -73,7 +105,7 @@ added as another message.
 - Request ordinary visible model content.
 - Do not request or parse the old structured Planning schema or terminal tool.
 - Do not include the selected profile's preset or instruct template.
-- Stream exact normal content into the assistant message's native reasoning
+- Stream exact normal content into the assistant message's native Planning
   disclosure before Response generation starts.
 - A user Stop aborts the request.
 
@@ -89,6 +121,11 @@ The earlier system-only packet is superseded. Live Gemini 3.7 Flash testing
 showed that Scylla converted its sole system message into a system instruction
 and rejected the request because no Gemini `contents` remained. The same exact
 MAX prompt succeeded as one user message.
+
+The later contextless user-only packet is also superseded. It could run Gemini,
+but it could not fill MAX from the current scene. Live Minimal and preset-context
+checks each produced filled MAX Planning from the latest copied chat before
+Response generation.
 
 The product meaning comes from David's direction.[^david-direction] The exact
 native-macro behavior was already exercised by the old bare implementation,

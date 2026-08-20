@@ -11,9 +11,9 @@
         <span><strong>Run Planner before normal Send</strong></span>
       </label>
 
-      <label for="agape-planner-prompt"><strong>Planner prompt</strong></label>
-      <textarea id="agape-planner-prompt" class="text_pole agape-pr__prompt" rows="18" spellcheck="false" placeholder="Write the complete prompt for the Planner. Native SillyTavern macros and variables are expanded when Send begins."></textarea>
-      <small>Saved literally. The Planner receives this prompt alone. Its output appears in the native reasoning box before Response starts.</small>
+      <label for="agape-planner-prompt"><strong>Planner template</strong></label>
+      <textarea id="agape-planner-prompt" class="text_pole agape-pr__prompt" rows="18" spellcheck="false" placeholder="Write the template the Planner should fill. Native SillyTavern macros and variables are expanded when Send begins."></textarea>
+      <small>Saved literally. It is placed after the active preset context and selected conversation history. Completed Planning appears before Response starts.</small>
 
       <section class="agape-pr__stage" aria-labelledby="agape-planner-heading">
         <h4 id="agape-planner-heading">Planner connection</h4>
@@ -39,6 +39,27 @@
         </div>
         <label for="agape-planner-model">Model override</label>
         <input id="agape-planner-model" class="text_pole" type="text" placeholder="Blank uses the profile model">
+
+        <label for="agape-planner-context-mode">Planner context</label>
+        <select id="agape-planner-context-mode" class="text_pole">
+          <option value="minimal">Minimal context</option>
+          <option value="preset">Current active preset context</option>
+        </select>
+        <small>The preset option wraps all enabled prompts from the active preset inside one &lt;preset&gt; block.</small>
+
+        <label for="agape-planner-history-mode">Conversation history</label>
+        <select id="agape-planner-history-mode" class="text_pole">
+          <option value="full">Full history</option>
+          <option value="depth">Recent messages only</option>
+        </select>
+        <div data-stage-panel="planner-history-depth" hidden>
+          <label for="agape-planner-history-depth">History depth in messages</label>
+          <input id="agape-planner-history-depth" class="text_pole" type="number" min="0" max="100" step="1">
+        </div>
+        <label class="checkbox_label" for="agape-planner-summaryception">
+          <input id="agape-planner-summaryception" type="checkbox">
+          <span><strong>Include Summaryception</strong><small>Available only with full history.</small></span>
+        </label>
       </section>
 
       <section class="agape-pr__stage" aria-labelledby="agape-response-heading">

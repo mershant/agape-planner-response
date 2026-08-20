@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T08:09:56Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -21,6 +21,11 @@ sources:
     title: David's Gemini Planner failure report
     author: human:david
     last_modified: 2026-08-20
+  - id: david-planner-context
+    resource: /sources/david-planner-context-contract-2026-08-20.md
+    title: David's Planner context contract
+    author: human:david
+    last_modified: 2026-08-20
 ---
 
 # Product
@@ -30,7 +35,7 @@ inspectable relationship:[^david-direction]
 
 ```text
 native SillyTavern Send
--> user-authored custom Planner prompt
+-> user-authored custom Planner template
 -> Planner model
 -> exact visible Planner output
 -> normal SillyTavern Response prompt with Planning last
@@ -47,14 +52,14 @@ not the new product foundation.
 - **Repository foundation:** written in the canonical workspace; strict OKF
   v0.2 validation passed with no issues.
 - **Exact Planner packet:** implemented, deterministically tested, and observed
-  live with a native variable expanded in its sole user message. The exact FF5
-  MAX prompt produced visible Planning through Gemini 3.7 Flash on Scylla.
+  live as one contextual user message. The exact FF5 MAX prompt produced filled
+  Planning through Gemini 3.7 Flash on Scylla in both Minimal and preset context.
 - **Exact Response packet:** implemented, deterministically tested, and observed
   live as the normal preset/chat request followed by exact Planning as its final
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 26 deterministic tests pass.
+- **Automated tests:** 32 deterministic tests pass.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -73,15 +78,18 @@ Only this section owns changing implementation and acceptance status.
 
 # Current boundary
 
-This concept owns the extension's one enable switch, literal Planner prompt,
+This concept owns the extension's one enable switch, literal Planner template,
 and two model connections:
 
 - enable or disable;
 - Planner connection: current or selected SillyTavern profile, or direct custom
   Chat Completion API;
+- Planner context: Minimal or current active preset;
+- Planner history: full or a configured recent-message depth;
+- optional Summaryception when full history is selected;
 - Response connection: current or selected SillyTavern profile, or direct
   custom Chat Completion API;
-- literal custom Planner prompt.
+- literal custom Planner template.
 
 Each connection has one optional model override. When it is blank, a selected
 profile's own model is used. Direct custom API keys remain in SillyTavern's key
@@ -89,7 +97,7 @@ store rather than extension settings.
 
 Normal SillyTavern Send starts the operation. A separate manual run path is not
 part of the current boundary. SillyTavern owns native macro expansion, profile
-and API transport, active preset assembly, reasoning display, assistant-message
+and API transport, active preset assembly, Planning display, assistant-message
 display, and Stop.
 
 The exact Planner request is owned by
@@ -100,9 +108,11 @@ active SillyTavern Response prompt.
 
 # Excluded architecture
 
-No phase scaffold, EGO system, mode system, lore injection, Summaryception,
+No phase scaffold, EGO system, mode system, independent lore injection,
 planning store, swipe lineage, renderer constitution, closed-world audit,
 privacy firewall, or structured Planning protocol enters the clean core unless
-David later directs a separately bounded addition.
+David later directs a separately bounded addition. The current bounded preset
+context and read-only Summaryception options are part of the Planner context
+contract; they do not revive AGAPE Lite's old compilation architecture.
 
 [^david-direction]: [David's simple Planner and Response direction](../sources/david-simple-planner-response-direction-2026-08-19.md)

@@ -14,6 +14,54 @@ function syncCurrentSwipe(message) {
   };
 }
 
+function setPlanningHeader(messageId, done) {
+  const header = globalThis.document?.querySelector?.(
+    `#chat .mes[mesid="${messageId}"] .mes_reasoning_header_title`,
+  );
+  const label = done ? 'Planning' : 'Planning...';
+  if (header && header.textContent !== label) header.textContent = label;
+}
+
+export function refreshPlanningHeaders(context) {
+  for (const [messageId, message] of context.chat.entries()) {
+    if (message?.extra?.agapePlannerResponsePlanning === true) {
+      setPlanningHeader(messageId, true);
+    }
+  }
+}
+
+export function installPlanningHeaderObserver(context) {
+  const chat = globalThis.document?.querySelector?.('#chat');
+  if (!chat || typeof globalThis.MutationObserver !== 'function') return null;
+  if (chat.__agapePlanningObserver) return chat.__agapePlanningObserver;
+
+  const observer = new globalThis.MutationObserver((mutations) => {
+    const messageIds = new Set();
+    const addMessage = (node) => {
+      const element = node?.nodeType === 1 ? node : node?.parentElement;
+      const message = element?.closest?.('.mes');
+      const messageId = Number(message?.getAttribute?.('mesid'));
+      if (Number.isInteger(messageId)) messageIds.add(messageId);
+      for (const nested of element?.querySelectorAll?.('.mes[mesid]') ?? []) {
+        const nestedId = Number(nested.getAttribute('mesid'));
+        if (Number.isInteger(nestedId)) messageIds.add(nestedId);
+      }
+    };
+    for (const mutation of mutations) {
+      addMessage(mutation.target);
+      for (const node of mutation.addedNodes ?? []) addMessage(node);
+    }
+    for (const messageId of messageIds) {
+      if (context.chat[messageId]?.extra?.agapePlannerResponsePlanning === true) {
+        setPlanningHeader(messageId, true);
+      }
+    }
+  });
+  observer.observe(chat, { childList: true, subtree: true, characterData: true });
+  chat.__agapePlanningObserver = observer;
+  return observer;
+}
+
 export async function recoverStalePendingMessage(context) {
   const last = context.chat.at(-1);
   if (last?.is_user !== false || last.extra?.agapePlannerResponsePending !== true) return false;
@@ -52,6 +100,7 @@ export async function createNativeMessage({
   message.extra ??= {};
   message.extra.agapePlannerResponsePending = true;
   message.extra.agapePlannerResponsePhase = 'planning';
+  message.extra.agapePlannerResponsePlanning = true;
 
   const { ReasoningHandler, ReasoningState, ReasoningType } = await loadReasoning();
   const handler = new ReasoningHandler(startedAt);
@@ -86,6 +135,7 @@ export async function createNativeMessage({
     );
     syncCurrentSwipe(current);
     handler.updateDom(messageId);
+    setPlanningHeader(messageId, done);
   }
 
   async function finalizeVisibleText(text) {
@@ -100,6 +150,7 @@ export async function createNativeMessage({
     delete finalized.extra.agapePlannerResponsePending;
     delete finalized.extra.agapePlannerResponsePhase;
     syncCurrentSwipe(finalized);
+    setPlanningHeader(messageId, true);
     await context.saveChat?.();
   }
 
@@ -129,6 +180,7 @@ export async function createNativeMessage({
       current.gen_finished = now();
       syncCurrentSwipe(current);
       context.updateMessageBlock?.(messageId, current);
+      setPlanningHeader(messageId, true);
     },
 
     async commitResponse(text) {

@@ -4,7 +4,7 @@ title: Response Request Contract
 description: Owns the accepted normal SillyTavern Response prompt with exact Planning last.
 tags: [response, request, active-preset]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -51,7 +51,7 @@ or rewritten. It is the last prompt message the Response model sees.
 | Token handling | Use the selected Response preset's normal allowance. |
 | Streaming | Stream ordinary visible content. |
 | Output acceptance | Any nonblank normal model content; preserve exact content. A provider's documented transport-error envelope remains a failed request. |
-| Native placement | Planner output completes in native reasoning before Response text begins in the same assistant message. |
+| Native placement | Planner output completes in native Planning before Response text begins in the same assistant message. |
 | Provider-hidden reasoning | Never replace or overwrite Planner output with Response-provider hidden reasoning. |
 | Stop | Abort the active Response request through the operation's single signal. |
 | Failure after Planning | Keep the assistant shell and set its visible text exactly to `Response failed.`; add no retry or swipe behavior. |

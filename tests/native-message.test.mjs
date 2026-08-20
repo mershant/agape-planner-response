@@ -59,6 +59,7 @@ test('native message keeps exact Planning and Response in one assistant message'
   assert.equal(context.chat.length, 2);
   assert.equal(context.chat[1].mes, 'final response');
   assert.equal(context.chat[1].extra.reasoning, ' exact {{literal}} ');
+  assert.equal(context.chat[1].extra.agapePlannerResponsePlanning, true);
   assert.equal(context.chat[1].extra.agapePlannerResponsePending, undefined);
   assert.equal(context.chat[1].swipes[0], 'final response');
 });

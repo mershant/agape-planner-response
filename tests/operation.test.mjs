@@ -15,6 +15,8 @@ test('one Send visibly completes Planning before Response in the same message', 
     async commitStoppedResponse() { events.push(['response-stopped']); },
   };
   const normalMessages = [{ role: 'system', content: 'Active preset last block' }];
+  const filledPlanning = '# Reasoning Protocol\n\nGATE 1. Gamestate:\n- Filled from current turn.';
+  let plannerRequest;
   let responseRequest;
 
   const result = await runPlannerResponse({
@@ -27,12 +29,16 @@ test('one Send visibly completes Planning before Response in the same message', 
       events.push(['expand', prompt]);
       return 'expanded state';
     },
+    collectPlannerContext: async () => ({
+      history: [{ role: 'user', name: 'Eloise', content: 'Current turn' }],
+    }),
     createMessage: async () => nativeMessage,
     requestPlanner: async ({ messages, onText }) => {
+      plannerRequest = messages;
       events.push(['planner-request', messages]);
       await onText('Plan');
-      await onText('Planning exact');
-      return 'Planning exact';
+      await onText(filledPlanning);
+      return filledPlanning;
     },
     captureResponseMessages: async () => {
       events.push(['capture-normal-response']);
@@ -48,11 +54,14 @@ test('one Send visibly completes Planning before Response in the same message', 
     signal: new AbortController().signal,
   });
 
-  assert.equal(result.planning, 'Planning exact');
+  assert.equal(result.planning, filledPlanning);
   assert.equal(result.response, 'Reply complete');
+  assert.equal(plannerRequest.length, 1);
+  assert.match(plannerRequest[0].content, /<message role="user" name="Eloise">\nCurrent turn\n<\/message>/);
+  assert.match(plannerRequest[0].content, /<planner_template>\nexpanded state\n<\/planner_template>/);
   assert.deepEqual(responseRequest, [
     { role: 'system', content: 'Active preset last block' },
-    { role: 'system', content: 'Planning exact' },
+    { role: 'system', content: filledPlanning },
   ]);
   assert.deepEqual(events.map(([name]) => name), [
     'expand',

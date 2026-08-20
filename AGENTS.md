@@ -46,7 +46,7 @@ authorized.
 
 - Build the smallest direct `Planner -> Response` extension described by the
   current concepts.
-- Preserve SillyTavern ownership of native macros, profile requests, reasoning
+- Preserve SillyTavern ownership of native macros, profile requests, Planning
   display, assistant messages, Stop, and ordinary Send behavior.
 - Add no context, prompt, history, preset, validator, mode, skill, memory, or
   retry behavior unless its current concept explicitly requires it.
