@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-19T20:34:45Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T07:53:49Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -56,7 +56,10 @@ not the new product foundation.
   layout were observed. The latest main-chat capsule could not be activated
   because Dev lacks its proxy password; the snapshot guard prevented a partial
   or credential-copying activation, so live proof used Dev's Test Environment.
-- **Acceptance and release:** not granted.
+- **Acceptance:** not granted.
+- **Release:** published as a public SillyTavern extension at
+  `https://github.com/mershant/agape-planner-response` after David directed
+  publication for installation on main.
 
 Only this section owns changing implementation and acceptance status.
 

@@ -1,5 +1,9 @@
 # Update Log
 
+## 2026-08-20
+
+- **Release**: Published the live-proven extension at `https://github.com/mershant/agape-planner-response` for installation through SillyTavern's extension installer.
+
 ## 2026-08-19
 
 - **Implementation**: Added the complete Chat Completion extension with profile and direct-custom connections, model overrides, native reasoning, active-preset Response assembly, Stop, and one-message persistence.

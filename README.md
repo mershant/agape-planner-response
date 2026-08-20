@@ -13,6 +13,18 @@ native SillyTavern Send
 
 It does not inherit AGAPE Lite's abandoned Planner architecture.
 
+## Install
+
+In SillyTavern, open **Extensions**, choose **Install Extension**, and enter:
+
+```text
+https://github.com/mershant/agape-planner-response
+```
+
+After installation, reload SillyTavern and configure **AGAPE Planner Response**
+in the Extensions settings drawer. The extension starts disabled until it has
+a Planner prompt and connections configured.
+
 ## Read first
 
 1. [`AGENTS.md`](AGENTS.md) defines how work is performed.
