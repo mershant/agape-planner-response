@@ -56,9 +56,10 @@ test('one Send visibly completes Planning before Response in the same message', 
 
   assert.equal(result.planning, filledPlanning);
   assert.equal(result.response, 'Reply complete');
-  assert.equal(plannerRequest.length, 1);
-  assert.match(plannerRequest[0].content, /<message role="user" name="Eloise">\nCurrent turn\n<\/message>/);
-  assert.match(plannerRequest[0].content, /<planner_template>\nexpanded state\n<\/planner_template>/);
+  assert.equal(plannerRequest.length, 6);
+  assert.equal(plannerRequest[2].role, 'user');
+  assert.match(plannerRequest[2].content, /<message name="Eloise">\nCurrent turn\n<\/message>/);
+  assert.match(plannerRequest[4].content, /<planner_template>\nexpanded state\n<\/planner_template>/);
   const eventNames = events.map(([name]) => name);
   assert.equal(eventNames.indexOf('expand'), 0);
   assert.ok(eventNames.indexOf('planning') < eventNames.indexOf('planner-request'));

@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -57,14 +57,14 @@ not the new product foundation.
 - **Repository foundation:** written in the canonical workspace; strict OKF
   v0.2 validation passed with no issues.
 - **Exact Planner packet:** implemented, deterministically tested, and observed
-  live as one contextual user message. The exact FF5 MAX prompt produced filled
+  live as a native system/user/assistant message sequence. The exact FF5 MAX prompt produced filled
   Planning through Gemini 3.7 Flash on Scylla in both Minimal and preset context.
 - **Exact Response packet:** implemented, deterministically tested, and observed
   live as the normal preset/chat request followed by exact Planning as its final
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 50 deterministic tests pass.
+- **Automated tests:** 56 deterministic tests pass.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -90,6 +90,11 @@ not the new product foundation.
   lower token allowance did not improve first output. The remaining delay is
   upstream processing of the large FF5/MAX packet, not local Response assembly
   or per-token DOM rendering.
+- **Native packet/render/timer proof:** Planner input now uses native system,
+  assistant, and user roles rather than one user blob. A deterministic browser
+  run made exactly two requests, rendered Planning and Response Markdown during
+  streaming, stored 3.687 seconds for a 3.831-second operation, displayed
+  `3.7s`, and recorded first Planning at 892 ms.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed

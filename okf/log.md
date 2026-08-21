@@ -2,6 +2,11 @@
 
 ## 2026-08-20
 
+- **Native packet correction**: Replaced the monolithic Planner user blob with native role messages. Extension instructions are system messages; only actual conversation turns retain user or assistant roles.
+- **Rendering correction**: Restored SillyTavern's native Planning and Response Markdown renderers behind the 50 ms stream throttle.
+- **Timer correction**: Candidate-owned timestamps now cover the complete Planner-to-Response operation instead of being reset by local Response prompt assembly.
+- **Native proof**: A deterministic two-request browser run rendered bold/headings during both streams and displayed a 3.7-second timer for a 3.687-second stored operation, with first Planning recorded at 892 ms.
+- **Native role correction**: Replaced the monolithic user blob with system task/preset/boundaries/template/start messages and actual history in its original assistant/user roles; the current user remains present at depth zero.
 - **Generation correction**: Moved ownership from Send to each normal, swipe, or regenerate assistant candidate; each path now makes exactly one Planner request and one Response request.
 - **Performance correction**: Opened the candidate before context assembly, moved Response assembly after Planning, throttled stream DOM writes to 50 ms, and removed the chat-wide mutation observer.
 - **Candidate proof**: Live normal, swipe, and regenerate checks each made exactly two Gemini 3.7 Flash requests. Normal opened in 342 ms with a 247 ms worst browser-heartbeat gap; swipe added one planned slot and regenerate replaced without changing chat length.

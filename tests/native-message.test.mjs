@@ -3,10 +3,15 @@ import test from 'node:test';
 
 import { createNativeMessage, recoverStalePendingMessage } from '../src/native-message.mjs';
 
+let lastReasoningHandler;
 class FakeReasoningHandler {
-  constructor(started) { this.initialTime = started; }
+  constructor(started) {
+    this.initialTime = started;
+    this.domUpdates = 0;
+    lastReasoningHandler = this;
+  }
   initHandleMessage() {}
-  updateDom() {}
+  updateDom() { this.domUpdates += 1; }
 }
 
 const reasoningModule = {
@@ -45,6 +50,7 @@ function fakeContext() {
     async deleteLastMessage() { context.chat.pop(); },
     async saveChat() { context.saved = true; },
     updateMessageBlock() {},
+    messageFormatting(text) { return `<strong>${text}</strong>`; },
   };
   return context;
 }
@@ -69,6 +75,64 @@ test('native message keeps exact Planning and Response in one assistant message'
   assert.equal(context.chat[1].extra.agapePlannerResponsePlanning, true);
   assert.equal(context.chat[1].extra.agapePlannerResponsePending, undefined);
   assert.equal(context.chat[1].swipes[0], 'final response');
+  assert.ok(Number(context.chat[1].gen_finished) > Number(context.chat[1].gen_started));
+  assert.ok(context.chat[1].extra.time_to_first_token >= 0);
+});
+
+test('streaming uses SillyTavern renderers instead of raw textContent', async () => {
+  const context = fakeContext();
+  const responseElement = { innerHTML: '', textContent: '' };
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    querySelector(selector) {
+      if (selector.endsWith('.mes_text')) return responseElement;
+      return null;
+    },
+  };
+  try {
+    const message = await createNativeMessage({
+      context,
+      loadReasoning: async () => reasoningModule,
+      now: () => new Date(1_000),
+    });
+    await message.setPlanning('# Planning\n\n- **Bold**');
+    await message.setResponse('**Bold Response**');
+
+    assert.ok(lastReasoningHandler.domUpdates >= 2);
+    assert.equal(responseElement.innerHTML, '<strong>**Bold Response**</strong>');
+    assert.equal(responseElement.textContent, '');
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test('operation timer advances while waiting for model output', async () => {
+  const context = fakeContext();
+  let tick;
+  let nowMs = 1_000;
+  const timerElement = { textContent: '', title: '' };
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    querySelector(selector) {
+      if (selector.endsWith('.mes_timer')) return timerElement;
+      return null;
+    },
+  };
+  try {
+    const message = await createNativeMessage({
+      context,
+      loadReasoning: async () => reasoningModule,
+      now: () => new Date(nowMs),
+      setInterval: (callback) => { tick = callback; return 1; },
+      clearInterval: () => {},
+    });
+    nowMs = 3_500;
+    tick();
+    assert.equal(timerElement.textContent, '2.5s');
+    await message.rollback();
+  } finally {
+    globalThis.document = previousDocument;
+  }
 });
 
 test('swipe Planning and Response stay in one new swipe slot', async () => {

@@ -4,7 +4,7 @@ title: Planner to Response Operation Flow
 description: Defines the ordered native Send operation without inventing packet details.
 tags: [runtime, planner, response, native-send]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T11:24:52Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -54,6 +54,12 @@ model request.
 Planning and Response stream updates are coalesced to at most one DOM write per
 50 ms. Native Planning is finalized once. The extension does not install a
 chat-wide mutation observer.
+
+Planning uses SillyTavern's native disclosure renderer. Response uses
+SillyTavern's message formatter with native-style temporary balancing for
+incomplete Markdown. The candidate owns its generation start, first-Planning,
+and finish timestamps so the displayed timer covers the complete two-request
+operation even though local Response prompt assembly calls a host dry run.
 
 The Response request cannot begin before the Planner request completes with
 accepted Planning. Exact accepted Planning is not summarized, rewritten,

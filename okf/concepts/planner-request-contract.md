@@ -4,7 +4,7 @@ title: Planner Request Contract
 description: Defines the exact contextual cross-provider request sent to the selected Planner model.
 tags: [planner, request, macros]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -48,10 +48,14 @@ the Planner request. The Planner's output is not expanded again.
 
 # Planner context
 
-The selected Planner connection receives exactly one `user` message so Gemini
-has request contents. That message has this ordered structure:
+The selected Planner connection receives a native role-message sequence. The
+extension-authored task, preset wrapper, history boundaries, Planner template,
+and start command are `system` messages. Actual visible conversation messages
+retain their original `user` or `assistant` roles, so Gemini receives real user
+contents without misclassifying extension instructions as user speech.
 
 ```text
+system:
 <system>
 Your only product is one completed Planning document for the next roleplay
 response. Copy the structure and labels from the Planner template, then fill
@@ -59,6 +63,7 @@ each part from the supplied history and optional preset reference. The later
 Response model writes the roleplay response.
 </system>
 
+system, preset context only:
 <preset>                         # preset context only
 <purpose>
 Reference definitions and constraints used to fill the Planner template.
@@ -68,18 +73,33 @@ Response model, not this task.
 ...enabled active-preset prompts...
 </preset>
 
+system:
 <history>
-...optional Summaryception, then selected visible conversation messages...
+
+system, optional:
+<summaryception>...</summaryception>
+
+assistant/user messages in original roles:
+<message name="...">...actual conversation text...</message>
+
+system:
 </history>
 
+system:
 <planner_template>
 ...native-expanded literal Planner textbox...
 </planner_template>
 
+system:
 Begin Planning now. Start output immediately with the Planner template's first
 section, preserve its structure, and fill it sequentially. Output only the
 completed Planning document.
 ```
+
+The start command is also `system` when selected history contains a real user
+turn. A greeting swipe or regenerate has no user turn; only in that case the
+start command is `user` so Gemini receives request contents. The task, preset,
+boundaries, and template remain system messages.
 
 The system task makes the hierarchy explicit: the only product is the completed
 Planning document; preset commands that request a roleplay response are
@@ -90,6 +110,10 @@ thinking.
 
 The current user turn is part of history because SillyTavern saves it before the
 Planner runs.
+
+Recent-message depth applies to preceding visible history. The current user
+turn remains present even when depth is zero, because it is the event being
+planned.
 
 # Context choices
 
@@ -102,7 +126,7 @@ Planner runs.
   authoritative location.
 - **Full history:** every visible user and assistant message in order.
 - **Recent messages:** the last configured number of visible messages in order;
-  zero supplies an empty history.
+  zero supplies no preceding messages but always retains the current user turn.
 - **Summaryception:** optional only with full history. Its promoted oldest layer
   is rendered first and live layer last. It is unavailable in recent-message
   mode.
@@ -127,7 +151,8 @@ for the current operation and are not written by this extension.
 
 An unstructured template accepts any nonblank normal-content string. A
 structured template requires the output to start with its first Markdown
-heading and retain every phase or gate label in template order. Preserve the
+heading and retain every phase identity and gate number in template order;
+Markdown level and explanatory suffix may vary. Preserve the
 accepted output's exact bytes for disclosure and Response handoff. Blank or
 structurally invalid content fails before a Response call. Provider-hidden
 reasoning is never substituted for normal content. A provider's documented

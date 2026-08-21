@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  buildPlannerContextMessage,
+  buildPlannerContextMessages,
   collectActivePresetPrompts,
   collectPlannerHistory,
   extractSummaryceptionText,
@@ -26,12 +26,45 @@ test('full Planner history preserves every visible conversation message in order
   ]);
 });
 
+test('native Planner packet separates task, preset, history, template, and start by role', () => {
+  const messages = buildPlannerContextMessages({
+    presetPrompts: [{ name: 'Rules', role: 'system', content: '<rules>Apply.</rules>' }],
+    history: [{ role: 'user', name: 'Eloise', content: 'Current turn.' }],
+    plannerTemplate: '# Planning\nGATE 1. Scene:',
+  });
+
+  assert.deepEqual(messages.map((message) => message.role), [
+    'system', 'system', 'system', 'user', 'system', 'system', 'system',
+  ]);
+  assert.match(messages[0].content, /^<system>/);
+  assert.match(messages[1].content, /^<preset>/);
+  assert.equal(messages[2].content, '<history>');
+  assert.match(messages[3].content, /^<message name="Eloise">/);
+  assert.equal(messages[4].content, '</history>');
+  assert.match(messages[5].content, /^<planner_template>/);
+  assert.match(messages[6].content, /^Begin Planning now\./);
+});
+
+test('greeting Planning uses only the start command as Gemini user contents', () => {
+  const messages = buildPlannerContextMessages({
+    history: [],
+    plannerTemplate: '# Planning\nGATE 1. Greeting:',
+  });
+  assert.deepEqual(messages.map((message) => message.role), [
+    'system', 'system', 'system', 'system', 'user',
+  ]);
+  assert.match(messages.at(-1).content, /^Begin Planning now\./);
+});
+
 test('depth-limited Planner history takes only the requested recent visible messages', () => {
   assert.deepEqual(collectPlannerHistory(chat, { historyMode: 'depth', historyDepth: 2 }), [
+    { role: 'user', name: 'Eloise', content: 'I inspect the sign.' },
     { role: 'assistant', name: 'Narrator', content: 'The attendant answers.' },
     { role: 'user', name: 'Eloise', content: 'I look down.' },
   ]);
-  assert.deepEqual(collectPlannerHistory(chat, { historyMode: 'depth', historyDepth: 0 }), []);
+  assert.deepEqual(collectPlannerHistory(chat, { historyMode: 'depth', historyDepth: 0 }), [
+    { role: 'user', name: 'Eloise', content: 'I look down.' },
+  ]);
 });
 
 test('Summaryception renders oldest promoted layer first and live layer last', () => {
@@ -73,23 +106,4 @@ test('preset context includes enabled active-preset prompts with variables expan
   }), [
     { name: 'NPC Voice', role: 'system', content: '<npc_voice>legato</npc_voice>' },
   ]);
-});
-
-test('Planner sees purpose, history, exact template, then the instruction to begin Planning', () => {
-  const message = buildPlannerContextMessage({
-    presetPrompts: [
-      { name: 'NPC Voice', role: 'system', content: '<npc_voice>Legato speech.</npc_voice>' },
-    ],
-    history: collectPlannerHistory(chat, { historyMode: 'full' }),
-    summaryception: 'Earlier events summarized here.',
-    plannerTemplate: '# MAX Template\nGate 1... {{literal-output}}',
-  });
-
-  assert.equal(message.role, 'user');
-  assert.match(message.content, /^<system>\nYour only product is one completed Planning document/);
-  assert.match(message.content, /<\/system>\n\n<preset>\n<purpose>Reference definitions and constraints[\s\S]*<prompt role="system" name="NPC Voice">/);
-  assert.match(message.content, /<history>[\s\S]*<summaryception>\nEarlier events summarized here\.[\s\S]*<message role="assistant" name="Narrator">\nOpening scene\.\n<\/message>/);
-  assert.match(message.content, /<planner_template>\n# MAX Template\nGate 1\.\.\. \{\{literal-output\}\}\n<\/planner_template>/);
-  assert.match(message.content, /<\/planner_template>\n\nBegin Planning now\. Start output immediately with the Planner template's first section/);
-  assert.doesNotMatch(message.content, /never call it reasoning/i);
 });

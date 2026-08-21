@@ -1,4 +1,4 @@
-import { buildPlannerContextMessage } from './planner-context.mjs';
+import { buildPlannerContextMessages } from './planner-context.mjs';
 
 export function requireVisibleText(value) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -19,10 +19,10 @@ export function buildPlannerRequest(prompt, substituteParams, plannerContext = {
   const expandedTemplate = requireVisibleText(expanded);
   return {
     expandedTemplate,
-    messages: [buildPlannerContextMessage({
+    messages: buildPlannerContextMessages({
       ...plannerContext,
       plannerTemplate: expandedTemplate,
-    })],
+    }),
   };
 }
 

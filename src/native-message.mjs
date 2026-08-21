@@ -1,3 +1,5 @@
+import { balanceStreamingMarkdown } from './streaming-markdown.mjs';
+
 const clone = (value) => structuredClone(value);
 
 function previousSwipeSnapshot(message) {
@@ -41,6 +43,16 @@ function setPlanningHeader(messageId, done) {
   );
   const label = done ? 'Planning' : 'Planning...';
   if (header && header.textContent !== label) header.textContent = label;
+}
+
+function updateOperationTimer(messageId, startedAt, finishedAt) {
+  const timer = globalThis.document?.querySelector?.(
+    `#chat .mes[mesid="${messageId}"] .mes_timer`,
+  );
+  if (!timer) return;
+  const seconds = Math.max(0, (Number(finishedAt) - Number(startedAt)) / 1000);
+  timer.textContent = `${seconds.toFixed(1)}s`;
+  timer.title = `Planner Response operation: ${seconds} seconds`;
 }
 
 export function refreshPlanningHeaders(context) {
@@ -89,6 +101,8 @@ export async function createNativeMessage({
   previousCandidate = null,
   loadReasoning = () => import('/scripts/reasoning.js'),
   now = () => new Date(),
+  setInterval = globalThis.setInterval,
+  clearInterval = globalThis.clearInterval,
 }) {
   const startedAt = now();
   const previousSwipe = type === 'swipe' && context.chat.at(-1)?.is_user === false
@@ -117,6 +131,7 @@ export async function createNativeMessage({
   message.extra.agapePlannerResponsePhase = 'planning';
   message.extra.agapePlannerResponsePlanning = true;
   message.extra.agapePlannerResponseCandidateType = type;
+  message.extra.type = 'agape-planning';
 
   const { ReasoningHandler, ReasoningState, ReasoningType } = await loadReasoning();
   const handler = new ReasoningHandler(startedAt);
@@ -124,7 +139,17 @@ export async function createNativeMessage({
   handler.state = ReasoningState.Thinking;
   handler.type = ReasoningType.Model;
   handler.startTime = startedAt;
+  setPlanningHeader(messageId, false);
   handler.updateDom(messageId);
+  setPlanningHeader(messageId, false);
+  message.gen_started = startedAt;
+  let firstPlanningAt = null;
+  const timerInterval = setInterval(() => {
+    if (context.chat[messageId]?.extra?.agapePlannerResponsePending === true) {
+      updateOperationTimer(messageId, startedAt, now());
+    }
+  }, 100);
+  timerInterval?.unref?.();
 
   function ownedMessage() {
     const current = context.chat[messageId];
@@ -138,6 +163,7 @@ export async function createNativeMessage({
   function persistPlanning(text, done) {
     const current = ownedMessage();
     const value = String(text ?? '');
+    if (value.trim() && firstPlanningAt === null) firstPlanningAt = now();
     const endedAt = done ? now() : null;
     handler.reasoning = value;
     handler.state = done ? ReasoningState.Done : ReasoningState.Thinking;
@@ -149,32 +175,40 @@ export async function createNativeMessage({
       0,
       Number(endedAt ?? now()) - Number(startedAt),
     );
-    if (done) {
-      syncCurrentSwipe(current);
-      handler.updateDom(messageId);
-    } else {
-      const content = globalThis.document?.querySelector?.(
-        `#chat .mes[mesid="${messageId}"] .mes_reasoning`,
-      );
-      if (content) content.textContent = value;
-    }
+    current.extra.time_to_first_token = firstPlanningAt === null
+      ? null
+      : Math.max(0, Number(firstPlanningAt) - Number(startedAt));
+    current.gen_started = startedAt;
+    if (done) syncCurrentSwipe(current);
+    handler.updateDom(messageId);
     setPlanningHeader(messageId, done);
   }
 
   async function finalizeVisibleText(text) {
     const current = ownedMessage();
-    await context.saveReply({
-      type: 'appendFinal',
-      getMessage: String(text ?? ''),
-      reasoning: '',
-    });
-    const finalized = context.chat[messageId];
-    finalized.extra ??= {};
-    delete finalized.extra.agapePlannerResponsePending;
-    delete finalized.extra.agapePlannerResponsePhase;
-    delete finalized.extra.agapePlannerResponseCandidateType;
-    syncCurrentSwipe(finalized);
+    const finishedAt = now();
+    clearInterval(timerInterval);
+    current.mes = String(text ?? '');
+    current.extra ??= {};
+    delete current.extra.agapePlannerResponsePending;
+    delete current.extra.agapePlannerResponsePhase;
+    delete current.extra.agapePlannerResponseCandidateType;
+    current.gen_started = startedAt;
+    current.gen_finished = finishedAt;
+    syncCurrentSwipe(current);
+    context.updateMessageBlock?.(messageId, current);
     setPlanningHeader(messageId, true);
+    updateOperationTimer(messageId, startedAt, finishedAt);
+    await context.eventSource?.emit?.(
+      context.eventTypes.MESSAGE_RECEIVED,
+      messageId,
+      type,
+    );
+    await context.eventSource?.emit?.(
+      context.eventTypes.CHARACTER_MESSAGE_RENDERED,
+      messageId,
+      type,
+    );
     await context.saveChat?.();
   }
 
@@ -205,7 +239,19 @@ export async function createNativeMessage({
       const content = globalThis.document?.querySelector?.(
         `#chat .mes[mesid="${messageId}"] .mes_text`,
       );
-      if (content) content.textContent = current.mes;
+      if (content) {
+        const formatted = context.messageFormatting?.(
+          balanceStreamingMarkdown(current.mes),
+          current.name,
+          current.is_system,
+          current.is_user,
+          messageId,
+          {},
+          false,
+        );
+        if (typeof formatted === 'string') content.innerHTML = formatted;
+        else content.textContent = current.mes;
+      }
       setPlanningHeader(messageId, true);
     },
 
@@ -234,6 +280,7 @@ export async function createNativeMessage({
     },
 
     async rollback() {
+      clearInterval(timerInterval);
       const current = context.chat[messageId];
       if (messageId !== context.chat.length - 1 || current?.extra?.agapePlannerResponsePending !== true) return;
       const previousCandidate = previousSwipe ?? previousRegenerate;

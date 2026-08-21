@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T17:34:35Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
 ---
 
 # Evidence states
@@ -26,9 +26,10 @@ The suite must prove the exact current contracts:
 
 1. Settings save literal values without model calls.
 2. Planner macro expansion is delegated once to SillyTavern.
-3. Planner receives exactly one contextual `user` message with task, optional
-   preset, selected history, Planner template, and start-Planning instruction in
-   the accepted order.
+3. Planner receives the native role-message sequence: extension-authored task,
+   optional preset, boundaries, template, and start command as `system`; actual
+   selected conversation retains `user` and `assistant` roles in the accepted
+   order.
 4. Blank Planner normal content prevents Response.
 5. Response receives the unchanged normal SillyTavern request plus exact
    Planning as its final `system` message.
@@ -47,6 +48,13 @@ The suite must prove the exact current contracts:
     assembly. Stream updates are throttled and the browser remains responsive.
 13. A structured Planner template rejects scene prose that omits its heading and
     first gate or phase marker.
+14. Planner input uses native roles: extension instructions are system messages;
+    actual selected history retains assistant and user roles.
+15. Planning and Response Markdown are rendered during streaming through
+    SillyTavern's formatters, including temporary balancing for incomplete
+    Markdown.
+16. The native timer covers the complete Planner-to-Response operation and
+    records first visible Planning separately.
 
 # Live acceptance
 

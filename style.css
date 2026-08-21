@@ -19,11 +19,13 @@
 .agape-pr__status[data-state="busy"] { color: var(--agape-pr-accent); }
 .agape-pr__status[data-state="error"] { color: var(--agape-pr-error); }
 
-#chat .mes.agape-planning .mes_reasoning_header_title {
+#chat .mes.agape-planning .mes_reasoning_header_title,
+#chat .mes[type="agape-planning"] .mes_reasoning_header_title {
   font-size: 0;
 }
 
-#chat .mes.agape-planning .mes_reasoning_header_title::before {
+#chat .mes.agape-planning .mes_reasoning_header_title::before,
+#chat .mes[type="agape-planning"] .mes_reasoning_header_title::before {
   content: "Planning";
   font-size: var(--mainFontSize, 1rem);
 }

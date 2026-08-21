@@ -30,7 +30,11 @@ export function collectPlannerHistory(chat, settings) {
   const depth = Number.isFinite(settings.historyDepth)
     ? Math.max(0, Math.trunc(settings.historyDepth))
     : 0;
-  return depth === 0 ? [] : messages.slice(-depth);
+  const currentUserIndex = messages.findLastIndex((message) => message.role === 'user');
+  if (currentUserIndex === -1) return depth === 0 ? [] : messages.slice(-depth);
+  const currentUser = messages[currentUserIndex];
+  const previous = messages.slice(0, currentUserIndex);
+  return [...(depth === 0 ? [] : previous.slice(-depth)), currentUser];
 }
 
 function snippetText(snippet) {
@@ -85,22 +89,6 @@ export function collectActivePresetPrompts({
   return rendered;
 }
 
-function renderHistory(history, summaryception) {
-  const sections = [];
-  if (nonblank(summaryception)) {
-    sections.push(`<summaryception>\n${summaryception}\n</summaryception>`);
-  }
-  for (const message of history) {
-    const name = message.name ? ` name="${escapeAttribute(message.name)}"` : '';
-    sections.push([
-      `<message role="${escapeAttribute(message.role)}"${name}>`,
-      message.content,
-      '</message>',
-    ].join('\n'));
-  }
-  return sections.join('\n\n');
-}
-
 function escapeAttribute(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 }
@@ -120,26 +108,47 @@ function renderPreset(prompts) {
   ].join('\n');
 }
 
-export function buildPlannerContextMessage({ presetPrompts, history, summaryception, plannerTemplate }) {
-  const sections = [
-    '<system>',
-    'Your only product is one completed Planning document for the next roleplay response. Copy the structure and labels from the Planner template, then fill each part from the supplied history and optional preset reference. The later Response model writes the roleplay response.',
-    '</system>',
-  ];
+export function buildPlannerContextMessages({ presetPrompts, history, summaryception, plannerTemplate }) {
+  const hasUserTurn = Array.isArray(history)
+    && history.some((message) => message.role === 'user');
+  const messages = [{
+    role: 'system',
+    content: [
+      '<system>',
+      'Your only product is one completed Planning document for the next roleplay response. Copy the structure and labels from the Planner template, then fill each part from the supplied history and optional preset reference. The later Response model writes the roleplay response.',
+      '</system>',
+    ].join('\n'),
+  }];
   const preset = renderPreset(presetPrompts);
-  if (preset) sections.push('', preset);
-  sections.push(
-    '',
-    '<history>',
-    renderHistory(Array.isArray(history) ? history : [], summaryception),
-    '</history>',
-    '',
-    '<planner_template>',
-    String(plannerTemplate ?? ''),
-    '</planner_template>',
-    '',
-    'Begin Planning now. Start output immediately with the Planner template\'s first section, preserve its structure, and fill it sequentially. Output only the completed Planning document.',
+  if (preset) messages.push({ role: 'system', content: preset });
+  messages.push({ role: 'system', content: '<history>' });
+  if (nonblank(summaryception)) {
+    messages.push({
+      role: 'system',
+      content: `<summaryception>\n${summaryception}\n</summaryception>`,
+    });
+  }
+  for (const message of Array.isArray(history) ? history : []) {
+    const name = message.name ? ` name="${escapeAttribute(message.name)}"` : '';
+    messages.push({
+      role: message.role,
+      content: `<message${name}>\n${message.content}\n</message>`,
+    });
+  }
+  messages.push(
+    { role: 'system', content: '</history>' },
+    {
+      role: 'system',
+      content: [
+        '<planner_template>',
+        String(plannerTemplate ?? ''),
+        '</planner_template>',
+      ].join('\n'),
+    },
+    {
+      role: hasUserTurn ? 'system' : 'user',
+      content: 'Begin Planning now. Start output immediately with the Planner template\'s first section, preserve its structure, and fill it sequentially. Output only the completed Planning document.',
+    },
   );
-
-  return { role: 'user', content: sections.join('\n') };
+  return messages;
 }

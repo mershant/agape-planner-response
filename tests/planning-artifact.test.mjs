@@ -40,6 +40,21 @@ test('structured labels must remain in template order', () => {
   ), /response instead of.*Planning/i);
 });
 
+test('phase and gate identity survives Markdown and explanatory suffix changes', () => {
+  const template = `# Planning
+
+PHASE BETA (IF multiple NPCs are present):
+
+GATE 2. Scope and Awareness:`;
+  const output = `## Planning
+
+### PHASE BETA
+
+#### GATE 2. NPC Scope:
+- Filled.`;
+  assert.equal(requirePlanningArtifact(output, template), output);
+});
+
 test('roleplay scene prose is rejected instead of becoming Planning', () => {
   assert.throws(() => requirePlanningArtifact(
     'Rain silvered the street. The courier opened the tavern door.',
