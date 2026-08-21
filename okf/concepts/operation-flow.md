@@ -4,7 +4,7 @@ title: Planner to Response Operation Flow
 description: Defines the ordered native Send operation without inventing packet details.
 tags: [runtime, planner, response, native-send]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-21T04:32:19Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -51,8 +51,16 @@ The complete operation makes exactly two model requests: one Planner request
 and one Response request. Prompt assembly is local work and cannot make another
 model request.
 
-Planning and Response stream updates are coalesced to at most one DOM write per
-50 ms. Native Planning is finalized once. The extension does not install a
+Runtime ownership follows the proven SillyTavern extension kernel: the exact
+newly saved terminal user turn binds normal generation; normal, swipe, and
+regenerate candidates run through one serialized queue; a newer candidate or
+chat switch interrupts the old operation and waits for rollback; one abort
+controller spans both requests.
+
+Planning uses SillyTavern's `ReasoningHandler` and Response uses
+`updateMessageBlock`, each behind the operation's coalesced update boundary.
+Final commit uses native `saveReply({ type: 'appendFinal' })` and native chat
+persistence. The extension does not maintain a competing message store or
 chat-wide mutation observer.
 
 Planning uses SillyTavern's native disclosure renderer. Response uses

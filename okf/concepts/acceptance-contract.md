@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-21T04:32:19Z }
 ---
 
 # Evidence states
@@ -55,6 +55,11 @@ The suite must prove the exact current contracts:
     Markdown.
 16. The native timer covers the complete Planner-to-Response operation and
     records first visible Planning separately.
+17. Normal generation binds the exact `MESSAGE_SENT` terminal user object.
+    Replacement runs are serialized; Stop and chat changes abort the active
+    controller before later stages can write.
+18. Visible transport returns first-delta and total metrics for Planner and
+    Response while ignoring provider-hidden content.
 
 # Live acceptance
 
@@ -72,6 +77,9 @@ Use only `/home/opc/SillyTavern-Dev` and its isolated data root. Observe:
 8. repeated Gemini 3.7 Flash preset-context runs produce filled template
    structure rather than a roleplay response; first-visible-Planning latency is
    reported separately from local candidate startup.
+9. on the latest snapshot, normal, swipe, regenerate, Planner Stop, and Response
+   Stop each satisfy request counts, ownership, rendering, timing, and rollback
+   behavior before STD is restored.
 
 Record what was directly observed and any remaining gap. Do not label live proof
 as acceptance without David's confirmation.

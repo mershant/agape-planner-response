@@ -46,7 +46,7 @@ export async function runPlannerResponse({
 
   try {
     await nativeMessage.setPlanning('');
-    const planning = await requestPlanner({
+    const planningResult = await requestPlanner({
       stage: settings.planner,
       messages: plannerRequest.messages,
       signal,
@@ -55,9 +55,12 @@ export async function runPlannerResponse({
         planningUpdates.schedule(text);
       },
     });
+    const planning = typeof planningResult === 'string'
+      ? planningResult
+      : planningResult?.text;
     planningText = requirePlanningArtifact(planning, plannerRequest.expandedTemplate);
     await planningUpdates.flush(planningText);
-    await nativeMessage.completePlanning(planningText);
+    await nativeMessage.completePlanning(planningText, planningResult?.metrics ?? planningResult);
     planningComplete = true;
 
     const normalMessages = await captureResponseMessages(
@@ -67,7 +70,7 @@ export async function runPlannerResponse({
     );
     signal?.throwIfAborted?.();
     const responseMessages = appendPlanningToResponse(normalMessages, planningText);
-    const response = await requestResponse({
+    const responseResult = await requestResponse({
       stage: settings.response,
       messages: responseMessages,
       signal,
@@ -76,10 +79,21 @@ export async function runPlannerResponse({
         responseUpdates.schedule(responseText);
       },
     });
+    const response = typeof responseResult === 'string'
+      ? responseResult
+      : responseResult?.text;
     responseText = requireVisibleText(cleanResponse(response, true));
     await responseUpdates.flush(responseText);
-    await nativeMessage.commitResponse(responseText);
-    return { planning: planningText, response: responseText, stopped: false };
+    await nativeMessage.commitResponse(responseText, responseResult?.metrics ?? responseResult);
+    return {
+      planning: planningText,
+      response: responseText,
+      stopped: false,
+      metrics: {
+        planner: planningResult?.metrics ?? planningResult ?? null,
+        response: responseResult?.metrics ?? responseResult ?? null,
+      },
+    };
   } catch (error) {
     await Promise.all([planningUpdates.cancel(), responseUpdates.cancel()]);
     if (!planningComplete) {
@@ -90,6 +104,15 @@ export async function runPlannerResponse({
       throw error;
     }
     if (signal?.aborted) {
+      if (signal.reason === 'interrupted') {
+        await nativeMessage.commitInterruptedResponse?.(responseText);
+        return {
+          planning: planningText,
+          response: responseText,
+          stopped: true,
+          interrupted: true,
+        };
+      }
       await nativeMessage.commitStoppedResponse?.(responseText);
       return { planning: planningText, response: responseText, stopped: true };
     }

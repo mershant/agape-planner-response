@@ -1,5 +1,5 @@
 import { cleanUpMessage } from '/script.js';
-import { ChatCompletion, promptManager, proxies } from '/scripts/openai.js';
+import { ChatCompletion, promptManager } from '/scripts/openai.js';
 import { rotateSecret, SECRET_KEYS, secret_state, writeSecret } from '/scripts/secrets.js';
 
 import {
@@ -15,16 +15,18 @@ import {
   extractSummaryceptionText,
 } from './planner-context.mjs';
 import { historyForGeneration, isPlannedGeneration } from './generation-candidate.mjs';
+import { balanceStreamingMarkdown } from './streaming-markdown.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
+import { createRuntimeKernel, validateNativeUserTurn } from './runtime-kernel.mjs';
 import { normalizeSettings } from './settings.mjs';
-import { requestStage } from './transport.mjs';
+import { requestStageDetailed } from './transport.mjs';
 import { mountSettings } from './ui.mjs';
 
 const EXTENSION_KEY = 'agapePlannerResponse';
-let activeController = null;
 let ui = null;
 let regenerateSnapshot = null;
+let kernel = null;
 
 const getContext = () => globalThis.SillyTavern.getContext();
 
@@ -50,21 +52,26 @@ function cleanResponse(text, final) {
   });
 }
 
-async function runOneCandidate(settings, generationType, previousCandidate = null) {
+async function runOneCandidate(
+  settings,
+  generationType,
+  previousCandidate = null,
+  signal,
+  nativeUserTurn = null,
+) {
   const initialContext = getContext();
+  if (generationType === 'normal') {
+    if (!validateNativeUserTurn(initialContext, nativeUserTurn)) {
+      throw new Error('The newly saved terminal user turn changed before Planning started');
+    }
+  }
   const plannerHistorySource = historyForGeneration(
     initialContext.chat,
     generationType,
   );
-  const controller = new AbortController();
-  activeController = controller;
-  const onStop = () => controller.abort(new DOMException('Generation aborted', 'AbortError'));
-  initialContext.eventSource.on(initialContext.eventTypes.GENERATION_STOPPED, onStop);
-
   let responsePreset;
   let responseMaxTokens;
-  try {
-    return await runPlannerResponse({
+  return runPlannerResponse({
       settings,
       substituteParams: (prompt) => getContext().substituteParams(prompt),
       collectPlannerContext: async (plannerSettings) => {
@@ -97,7 +104,7 @@ async function runOneCandidate(settings, generationType, previousCandidate = nul
       }),
       requestPlanner: ({ stage, messages, signal, onText }) => {
         const context = getContext();
-        return requestStage({
+        return requestStageDetailed({
           context,
           stage,
           messages,
@@ -128,24 +135,22 @@ async function runOneCandidate(settings, generationType, previousCandidate = nul
           ? capture()
           : nativeMessage.withoutCandidate(capture);
       },
-      requestResponse: ({ stage, messages, signal, onText }) => requestStage({
+      requestResponse: ({ stage, messages, signal, onText }) => requestStageDetailed({
         context: getContext(),
         stage,
         messages,
         maxTokens: responseMaxTokens,
         includePreset: true,
         presetName: responsePreset,
-        proxies,
         signal,
         onText,
       }),
-      cleanResponse,
-      signal: controller.signal,
+      cleanResponse: (text, final) => {
+        const cleaned = cleanResponse(text, final);
+        return final ? cleaned : balanceStreamingMarkdown(cleaned);
+      },
+      signal,
     });
-  } finally {
-    initialContext.eventSource.removeListener(initialContext.eventTypes.GENERATION_STOPPED, onStop);
-    activeController = null;
-  }
 }
 
 export async function generationInterceptor(_chat, _contextSize, abort, type) {
@@ -153,17 +158,31 @@ export async function generationInterceptor(_chat, _contextSize, abort, type) {
   const settings = currentSettings();
   if (!settings.enabled) return;
 
-  abort(true);
-  if (activeController) {
-    globalThis.toastr?.warning('Planner Response is already running.');
-    return;
+  let nativeUserTurn = null;
+  if (type === 'normal') {
+    nativeUserTurn = kernel?.consumeUserTurn(_chat);
+    if (!nativeUserTurn) {
+      abort(true);
+      ui?.setStatus('Failed', 'error');
+      globalThis.toastr?.error(
+        'Planner Response could not bind the newly saved user turn.',
+        'Planner Response',
+      );
+      return;
+    }
   }
 
+  abort(true);
   ui?.setStatus('Planning', 'busy');
   const previousCandidate = type === 'regenerate' ? regenerateSnapshot : null;
   regenerateSnapshot = null;
   try {
-    const result = await runOneCandidate(settings, type, previousCandidate);
+    const result = await kernel.enqueue({
+      settings,
+      generationType: type,
+      previousCandidate,
+      nativeUserTurn,
+    });
     ui?.setStatus(result.stopped ? 'Stopped' : 'Complete', 'idle');
   } catch (error) {
     console.error('[AGAPE Planner Response] Generation failed.', error);
@@ -192,6 +211,18 @@ export async function initialize() {
   });
   refreshPlanningHeaders(context);
 
+  kernel = createRuntimeKernel({
+    contextProvider: getContext,
+    runCandidate: ({ settings, generationType, previousCandidate, nativeUserTurn, signal }) => (
+      runOneCandidate(settings, generationType, previousCandidate, signal, nativeUserTurn)
+    ),
+  });
+
+  context.eventSource.on(context.eventTypes.MESSAGE_SENT, (messageIndex) => {
+    kernel.captureUserTurn(messageIndex);
+  });
+  context.eventSource.on(context.eventTypes.GENERATION_STOPPED, () => kernel.stop());
+
   context.eventSource.on(context.eventTypes.GENERATION_STARTED, (type, _options, dryRun) => {
     if (type !== 'regenerate' || dryRun) return;
     const last = getContext().chat.at(-1);
@@ -216,7 +247,8 @@ export async function initialize() {
     ));
   }
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, () => {
-    if (!activeController) {
+    kernel.chatChanged();
+    if (!kernel.isBusy()) {
       recoverStalePendingMessage(getContext()).then(() => {
         globalThis.setTimeout(() => refreshPlanningHeaders(getContext()), 0);
       }).catch((error) => {
@@ -227,5 +259,5 @@ export async function initialize() {
 }
 
 export function stopActiveOperation() {
-  activeController?.abort(new DOMException('Generation aborted', 'AbortError'));
+  kernel?.stop();
 }

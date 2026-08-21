@@ -140,6 +140,67 @@ test('Stop during Planner packet construction ends as stopped before creating a 
   assert.equal(shellCreated, false);
 });
 
+test('chat-switch interruption after Planning does not commit into the old chat', async () => {
+  const controller = new AbortController();
+  let stoppedCommit = false;
+  const result = await runPlannerResponse({
+    settings: {
+      plannerPrompt: 'Prompt',
+      planner: { source: 'profile' },
+      response: { source: 'profile' },
+    },
+    substituteParams: (text) => text,
+    createMessage: async () => ({
+      async setPlanning() {},
+      async completePlanning() {},
+      async setResponse() {},
+      async commitStoppedResponse() { stoppedCommit = true; },
+      async commitInterruptedResponse() { return false; },
+      async rollback() {},
+    }),
+    requestPlanner: async () => 'Planning',
+    captureResponseMessages: async () => [],
+    requestResponse: async () => {
+      controller.abort('interrupted');
+      throw controller.signal.reason;
+    },
+    cleanResponse: (text) => text,
+    signal: controller.signal,
+  });
+  assert.equal(result.interrupted, true);
+  assert.equal(stoppedCommit, false);
+});
+
+test('replacement interruption after Planning closes before the next queued run', async () => {
+  const controller = new AbortController();
+  let interruptedCommit = 0;
+  const result = await runPlannerResponse({
+    settings: {
+      plannerPrompt: 'Prompt',
+      planner: { source: 'profile' },
+      response: { source: 'profile' },
+    },
+    substituteParams: (text) => text,
+    createMessage: async () => ({
+      async setPlanning() {},
+      async completePlanning() {},
+      async setResponse() {},
+      async commitInterruptedResponse() { interruptedCommit += 1; return true; },
+      async rollback() {},
+    }),
+    requestPlanner: async () => 'Planning',
+    captureResponseMessages: async () => [],
+    requestResponse: async () => {
+      controller.abort('interrupted');
+      throw controller.signal.reason;
+    },
+    cleanResponse: (text) => text,
+    signal: controller.signal,
+  });
+  assert.equal(result.interrupted, true);
+  assert.equal(interruptedCommit, 1);
+});
+
 test('provider cancellation wording is a Response failure unless Stop aborted the signal', async () => {
   const events = [];
   await assert.rejects(() => runPlannerResponse({

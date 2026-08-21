@@ -1,5 +1,11 @@
 # Update Log
 
+## 2026-08-21
+
+- **Test release**: Published the rewritten host kernel as v0.4.1 for David's main-session testing after deterministic verification; final user acceptance remains pending.
+- **Runtime rewrite**: Replaced the patch-built host layer with the proven AGAPE Lite kernel seams: saved-user-turn ownership, serialized replacement queue, one abort controller, chat identity checks, visible profile stream metrics, ReasoningHandler Planning, native Response paint, appendFinal commit, and rollback.
+- **Latest-session proof**: Captured and activated the latest `Slave City` main chat through the rp-prompting snapshot tool. Normal, swipe, regenerate, Planner Stop, and Response Stop passed on FF5 MAX with Gemini 3.7 Flash through Scylla, with exact two-call counts for completed candidates.
+
 ## 2026-08-20
 
 - **Native packet correction**: Replaced the monolithic Planner user blob with native role messages. Extension instructions are system messages; only actual conversation turns retain user or assistant roles.

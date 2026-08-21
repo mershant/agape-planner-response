@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-08-21T04:32:19Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -64,7 +64,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 56 deterministic tests pass.
+- **Automated tests:** 83 deterministic tests pass.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -95,6 +95,14 @@ not the new product foundation.
   run made exactly two requests, rendered Planning and Response Markdown during
   streaming, stored 3.687 seconds for a 3.831-second operation, displayed
   `3.7s`, and recorded first Planning at 892 ms.
+- **Rewritten-kernel live proof:** the latest August 21 `Slave City` snapshot
+  completed normal, swipe, and regenerate through the reimplemented proven host
+  kernel. Each completed candidate made exactly one Planner request and one
+  Response request. Native Stop during Planner made one request and rolled back;
+  native Stop during Response made two requests, kept Planning, and made no
+  third request. Normal produced 7,706 characters of Planning and 6,591
+  characters of Response, displayed `33.0s`, and stored independent Planner and
+  Response first-delta/total metrics.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed
