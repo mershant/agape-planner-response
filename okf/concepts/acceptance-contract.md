@@ -46,19 +46,17 @@ The suite must prove the exact current contracts:
     intercepted.
 12. The candidate and Planning disclosure appear before Response prompt
     assembly. Stream updates are throttled and the browser remains responsive.
-13. A structured Planner template rejects scene prose that omits its heading and
-    first gate or phase marker.
-14. Planner input uses native roles: extension instructions are system messages;
+13. Planner input uses native roles: extension instructions are system messages;
     actual selected history retains assistant and user roles.
-15. Planning and Response Markdown are rendered during streaming through
+14. Planning and Response Markdown are rendered during streaming through
     SillyTavern's formatters, including temporary balancing for incomplete
     Markdown.
-16. The native timer covers the complete Planner-to-Response operation and
+15. The native timer covers the complete Planner-to-Response operation and
     records first visible Planning separately.
-17. Normal generation binds the exact `MESSAGE_SENT` terminal user object.
+16. Normal generation binds the exact `MESSAGE_SENT` terminal user object.
     Replacement runs are serialized; Stop and chat changes abort the active
     controller before later stages can write.
-18. Visible transport returns first-delta and total metrics for Planner and
+17. Visible transport returns first-delta and total metrics for Planner and
     Response while ignoring provider-hidden content.
 
 # Live acceptance

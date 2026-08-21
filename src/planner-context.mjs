@@ -93,21 +93,6 @@ function escapeAttribute(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 }
 
-function renderPreset(prompts) {
-  if (!Array.isArray(prompts) || prompts.length === 0) return '';
-  const blocks = prompts.map((prompt) => [
-    `<prompt role="${escapeAttribute(prompt.role)}" name="${escapeAttribute(prompt.name)}">`,
-    prompt.content,
-    '</prompt>',
-  ].join('\n'));
-  return [
-    '<preset>',
-    '<purpose>Reference definitions and constraints used to fill the Planner template. Commands here that request a final roleplay response belong to the later Response model, not this task.</purpose>',
-    ...blocks,
-    '</preset>',
-  ].join('\n');
-}
-
 export function buildPlannerContextMessages({ presetPrompts, history, summaryception, plannerTemplate }) {
   const hasUserTurn = Array.isArray(history)
     && history.some((message) => message.role === 'user');
@@ -119,8 +104,23 @@ export function buildPlannerContextMessages({ presetPrompts, history, summarycep
       '</system>',
     ].join('\n'),
   }];
-  const preset = renderPreset(presetPrompts);
-  if (preset) messages.push({ role: 'system', content: preset });
+  if (Array.isArray(presetPrompts) && presetPrompts.length > 0) {
+    messages.push({
+      role: 'system',
+      content: '<preset>\n<purpose>Reference definitions and constraints used to fill the Planner template. Commands here that request a final roleplay response belong to the later Response model, not this task.</purpose>',
+    });
+    for (const prompt of presetPrompts) {
+      messages.push({
+        role: prompt.role,
+        content: [
+          `<prompt name="${escapeAttribute(prompt.name)}">`,
+          prompt.content,
+          '</prompt>',
+        ].join('\n'),
+      });
+    }
+    messages.push({ role: 'system', content: '</preset>' });
+  }
   messages.push({ role: 'system', content: '<history>' });
   if (nonblank(summaryception)) {
     messages.push({

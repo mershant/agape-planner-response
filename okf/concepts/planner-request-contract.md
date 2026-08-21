@@ -149,14 +149,12 @@ for the current operation and are not written by this extension.
 
 # Output boundary
 
-An unstructured template accepts any nonblank normal-content string. A
-structured template requires the output to start with its first Markdown
-heading and retain every phase identity and gate number in template order;
-Markdown level and explanatory suffix may vary. Preserve the
-accepted output's exact bytes for disclosure and Response handoff. Blank or
-structurally invalid content fails before a Response call. Provider-hidden
-reasoning is never substituted for normal content. A provider's documented
-transport-error envelope is a failed request, not model content.
+Any nonblank normal-content string is valid Planner output. Preserve its exact
+bytes for disclosure and Response handoff. Blank content fails before a
+Response call. The extension does not judge whether Planning followed or
+completed the user's template. Provider-hidden reasoning is never substituted
+for normal content. A provider's documented transport-error envelope is a
+failed request, not model content.
 
 The earlier system-only packet is superseded. Live Gemini 3.7 Flash testing
 showed that Scylla converted its sole system message into a system instruction
@@ -167,9 +165,6 @@ The later contextless user-only packet is also superseded. It could run Gemini,
 but it could not fill MAX from the current scene. Live Minimal and preset-context
 checks each produced filled MAX Planning from the latest copied chat before
 Response generation.
-
-Scene prose that does not preserve the complete structured template is not
-accepted as Planning and cannot start Response.
 
 The product meaning comes from David's direction.[^david-direction] The exact
 native-macro behavior was already exercised by the old bare implementation,

@@ -5,6 +5,8 @@
 - **Test release**: Published the rewritten host kernel as v0.4.1 for David's main-session testing after deterministic verification; final user acceptance remains pending.
 - **Runtime rewrite**: Replaced the patch-built host layer with the proven AGAPE Lite kernel seams: saved-user-turn ownership, serialized replacement queue, one abort controller, chat identity checks, visible profile stream metrics, ReasoningHandler Planning, native Response paint, appendFinal commit, and rollback.
 - **Latest-session proof**: Captured and activated the latest `Slave City` main chat through the rp-prompting snapshot tool. Normal, swipe, regenerate, Planner Stop, and Response Stop passed on FF5 MAX with Gemini 3.7 Flash through Scylla, with exact two-call counts for completed candidates.
+- **Native preset correction**: Replaced the combined preset system message with separate original-role messages inside one preset boundary and removed the extension's invented structural Planning validator.
+- **Latest-session recheck**: With separate native-role preset messages, normal, swipe, regenerate, Planner Stop, and Response Stop passed again on the copied latest session.
 
 ## 2026-08-20
 
@@ -16,7 +18,7 @@
 - **Generation correction**: Moved ownership from Send to each normal, swipe, or regenerate assistant candidate; each path now makes exactly one Planner request and one Response request.
 - **Performance correction**: Opened the candidate before context assembly, moved Response assembly after Planning, throttled stream DOM writes to 50 ms, and removed the chat-wide mutation observer.
 - **Candidate proof**: Live normal, swipe, and regenerate checks each made exactly two Gemini 3.7 Flash requests. Normal opened in 342 ms with a 247 ms worst browser-heartbeat gap; swipe added one planned slot and regenerate replaced without changing chat length.
-- **Gemini output correction**: Made the Planner task authoritative over preset response commands and reject structured-template output that becomes scene prose. Three consecutive preset-context runs produced filled MAX Planning with two requests each.
+- **Gemini output correction**: Made the Planner task authoritative over preset response commands. Three consecutive preset-context runs produced filled MAX Planning with two requests each.
 - **Latency evidence**: Candidate startup measured about 0.4 seconds and first visible preset-context Planning at 12.9 seconds. Disabling thinking, setting reasoning effort to none, and lowering the token allowance did not reduce the Scylla/Gemini first-token delay.
 - **Context correction**: Replaced the contextless Planner with David's task/history/template/start wrapper, full or depth-limited history, full-history-only Summaryception, and Minimal or one-block active-preset context.
 - **Live proof**: On the latest copied FF5 chat, Minimal produced 11,200 characters of filled MAX Planning and preset context produced 5,146 characters with 36 enabled prompts inside one `<preset>` block; each completed before a normal Gemini 3.7 Flash Response.

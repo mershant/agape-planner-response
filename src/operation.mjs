@@ -4,7 +4,6 @@ import {
   requireVisibleText,
 } from './contracts.mjs';
 import { createThrottledUpdater } from './throttled-updater.mjs';
-import { requirePlanningArtifact } from './planning-artifact.mjs';
 
 export async function runPlannerResponse({
   settings,
@@ -58,7 +57,7 @@ export async function runPlannerResponse({
     const planning = typeof planningResult === 'string'
       ? planningResult
       : planningResult?.text;
-    planningText = requirePlanningArtifact(planning, plannerRequest.expandedTemplate);
+    planningText = requireVisibleText(planning);
     await planningUpdates.flush(planningText);
     await nativeMessage.completePlanning(planningText, planningResult?.metrics ?? planningResult);
     planningComplete = true;

@@ -70,11 +70,10 @@ and finish timestamps so the displayed timer covers the complete two-request
 operation even though local Response prompt assembly calls a host dry run.
 
 The Response request cannot begin before the Planner request completes with
-accepted Planning. Exact accepted Planning is not summarized, rewritten,
-macro-expanded a second time, or replaced with provider-hidden reasoning. A
-structured Planner template must preserve its heading and ordered section
-labels; this is the acceptance boundary that prevents a roleplay response from
-being misclassified as Planning.
+nonblank visible Planning. Exact Planning is not summarized, rewritten,
+macro-expanded a second time, or replaced with provider-hidden reasoning. The
+extension does not judge whether Planning followed or completed the user's
+template.
 
 # Cancellation
 

@@ -64,7 +64,10 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 83 deterministic tests pass.
+- **Automated tests:** 76 deterministic tests pass. The former structural
+  Planning validator and its tests were removed because the extension cannot
+  know whether an arbitrary user-authored template is complete; only blank
+  visible Planner output is rejected.
 - **Live SillyTavern Dev proof:** ordinary Send completed through selected-profile
   and direct-custom transports; one assistant message retained Planning and
   Response; both Stop phases, failure text, settings persistence, message
@@ -81,9 +84,8 @@ not the new product foundation.
   full MAX run. Swipe added one swipe slot without adding a chat message;
   regenerate replaced the candidate without changing chat length.
 - **Repeated Gemini output proof:** three consecutive Gemini 3.7 Flash
-  preset-context runs each produced a filled MAX artifact and then a Response,
-  with exactly two model requests per candidate. Scene prose that does not
-  preserve a structured Planner template is rejected before Response.
+  preset-context runs each produced Planning and then a Response, with exactly
+  two model requests per candidate.
 - **Latency boundary:** the candidate appeared in about 0.4 seconds. A
   candidate-specific preset-context measurement reached first visible Planning
   at 12.9 seconds. Scylla overrides for no reasoning, disabled thinking, and a
@@ -103,6 +105,11 @@ not the new product foundation.
   third request. Normal produced 7,706 characters of Planning and 6,591
   characters of Response, displayed `33.0s`, and stored independent Planner and
   Response first-delta/total metrics.
+- **Native preset correction:** each enabled preset prompt is now its
+  own original-role message between one `<preset>` opening and closing boundary;
+  the former combined preset message is gone. Live normal, swipe, and regenerate
+  each completed with two requests; Planner Stop made one request and Response
+  Stop made two.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed

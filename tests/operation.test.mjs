@@ -278,31 +278,3 @@ test('blank Planner output removes its shell and never starts Response', async (
   assert.equal(rolledBack, true);
   assert.equal(responseStarted, false);
 });
-
-test('structured scene prose rolls back and never makes the Response request', async () => {
-  let responseStarted = false;
-  let rolledBack = false;
-  const template = '# Planning Template\n\nGATE 1. Scene:\n- Fill this.';
-
-  await assert.rejects(() => runPlannerResponse({
-    settings: {
-      plannerPrompt: template,
-      planner: { source: 'profile' },
-      response: { source: 'profile' },
-    },
-    substituteParams: (text) => text,
-    createMessage: async () => ({
-      async setPlanning() {},
-      async completePlanning() {},
-      async rollback() { rolledBack = true; },
-    }),
-    requestPlanner: async () => 'The tavern door opened. Everyone turned.',
-    captureResponseMessages: async () => [],
-    requestResponse: async () => { responseStarted = true; },
-    cleanResponse: (text) => text,
-    signal: new AbortController().signal,
-  }), /response instead of.*Planning/i);
-
-  assert.equal(rolledBack, true);
-  assert.equal(responseStarted, false);
-});

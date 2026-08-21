@@ -18,7 +18,8 @@ Planning with that swipe. Continue remains native SillyTavern behavior.
 It does not inherit AGAPE Lite's abandoned Planner architecture.
 
 The Planner can use Minimal context or copy the enabled prompts from the current
-active preset into one `<preset>` block. History can be full or depth-limited.
+active preset as separate native-role messages inside one `<preset>` block.
+History can be full or depth-limited.
 Summaryception can be included only with full history.
 
 ## Install

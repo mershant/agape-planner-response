@@ -28,21 +28,33 @@ test('full Planner history preserves every visible conversation message in order
 
 test('native Planner packet separates task, preset, history, template, and start by role', () => {
   const messages = buildPlannerContextMessages({
-    presetPrompts: [{ name: 'Rules', role: 'system', content: '<rules>Apply.</rules>' }],
+    presetPrompts: [
+      { name: 'Rules', role: 'system', content: '<rules>Apply.</rules>' },
+      { name: 'Example', role: 'assistant', content: 'Example response.' },
+      { name: 'Direction', role: 'user', content: 'Follow this direction.' },
+    ],
     history: [{ role: 'user', name: 'Eloise', content: 'Current turn.' }],
     plannerTemplate: '# Planning\nGATE 1. Scene:',
   });
 
   assert.deepEqual(messages.map((message) => message.role), [
-    'system', 'system', 'system', 'user', 'system', 'system', 'system',
+    'system', 'system', 'system', 'assistant', 'user', 'system',
+    'system', 'user', 'system', 'system', 'system',
   ]);
   assert.match(messages[0].content, /^<system>/);
   assert.match(messages[1].content, /^<preset>/);
-  assert.equal(messages[2].content, '<history>');
-  assert.match(messages[3].content, /^<message name="Eloise">/);
-  assert.equal(messages[4].content, '</history>');
-  assert.match(messages[5].content, /^<planner_template>/);
-  assert.match(messages[6].content, /^Begin Planning now\./);
+  assert.match(messages[2].content, /^<prompt name="Rules">/);
+  assert.match(messages[3].content, /^<prompt name="Example">/);
+  assert.match(messages[4].content, /^<prompt name="Direction">/);
+  assert.equal(messages[5].content, '</preset>');
+  assert.equal(messages[6].content, '<history>');
+  assert.match(messages[7].content, /^<message name="Eloise">/);
+  assert.equal(messages[8].content, '</history>');
+  assert.match(messages[9].content, /^<planner_template>/);
+  assert.match(messages[10].content, /^Begin Planning now\./);
+  assert.equal(messages.filter((message) => message.content.startsWith('<preset>')).length, 1);
+  assert.equal(messages.filter((message) => message.content === '</preset>').length, 1);
+  assert.equal(messages.some((message) => message.content.includes('Apply.</rules>\n</prompt>\n<prompt')), false);
 });
 
 test('greeting Planning uses only the start command as Gemini user contents', () => {
