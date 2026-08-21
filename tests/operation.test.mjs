@@ -57,8 +57,8 @@ test('one Send visibly completes Planning before Response in the same message', 
   assert.equal(result.planning, filledPlanning);
   assert.equal(result.response, 'Reply complete');
   assert.equal(plannerRequest.length, 6);
-  assert.equal(plannerRequest[2].role, 'user');
-  assert.match(plannerRequest[2].content, /<message name="Eloise">\nCurrent turn\n<\/message>/);
+  assert.equal(plannerRequest[1].role, 'user');
+  assert.match(plannerRequest[1].content, /<message name="Eloise">\nCurrent turn\n<\/message>/);
   assert.match(plannerRequest[4].content, /<planner_template>\nexpanded state\n<\/planner_template>/);
   const eventNames = events.map(([name]) => name);
   assert.equal(eventNames.indexOf('expand'), 0);
@@ -78,6 +78,37 @@ test('one Send visibly completes Planning before Response in the same message', 
     'response-request',
     'response',
     'response-complete',
+  ]);
+});
+
+test('Planner and Response requests retain their separate stage settings', async () => {
+  const seen = [];
+  const planner = { source: 'profile', profileId: 'planner-profile', model: 'planner-model' };
+  const response = { source: 'profile', profileId: 'response-profile', model: 'response-model' };
+  await runPlannerResponse({
+    settings: { plannerPrompt: 'Template', planner, response },
+    substituteParams: (text) => text,
+    createMessage: async () => ({
+      async setPlanning() {},
+      async completePlanning() {},
+      async setResponse() {},
+      async commitResponse() {},
+    }),
+    requestPlanner: async ({ stage }) => {
+      seen.push(['planner', stage]);
+      return 'Planning';
+    },
+    captureResponseMessages: async () => [],
+    requestResponse: async ({ stage }) => {
+      seen.push(['response', stage]);
+      return 'Response';
+    },
+    cleanResponse: (text) => text,
+    signal: new AbortController().signal,
+  });
+  assert.deepEqual(seen, [
+    ['planner', planner],
+    ['response', response],
   ]);
 });
 

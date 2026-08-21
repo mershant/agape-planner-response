@@ -17,6 +17,7 @@ test('Planner receives a native contextual message sequence with its expanded te
   assert.deepEqual(calls, ['State: {{getvar::state}}']);
   assert.equal(messages.length, 5);
   assert.deepEqual(messages.map((message) => message.role), ['system', 'system', 'system', 'system', 'user']);
+  assert.match(messages[2].content, /^<task>/);
   assert.match(messages[3].content, /<planner_template>\nState: active\n<\/planner_template>/);
   assert.match(messages[4].content, /^Begin Planning now\./);
 });

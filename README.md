@@ -22,6 +22,12 @@ active preset as separate native-role messages inside one `<preset>` block.
 History can be full or depth-limited.
 Summaryception can be included only with full history.
 
+The preset block is reference material for the later roleplay response. A
+separate task after history tells the Planner to fill the user's template. The
+Planner and Response profile/model choices remain separate through their two
+HTTP requests, including model-specific request-body cleanup when the active
+preset was configured for a different model family.
+
 ## Install
 
 In SillyTavern, open **Extensions**, choose **Install Extension**, and enter:

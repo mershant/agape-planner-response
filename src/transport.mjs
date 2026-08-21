@@ -8,6 +8,22 @@ function defaultNow() {
   return globalThis.performance?.now?.() ?? Date.now();
 }
 
+function wait(milliseconds, signal) {
+  signal?.throwIfAborted?.();
+  return new Promise((resolve, reject) => {
+    const finish = () => {
+      signal?.removeEventListener?.('abort', abort);
+      resolve();
+    };
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(new DOMException('Generation stopped', 'AbortError'));
+    };
+    const timeout = setTimeout(finish, milliseconds);
+    signal?.addEventListener?.('abort', abort, { once: true });
+  });
+}
+
 function normalizePossibleEnvelope(text) {
   const normalized = text.replaceAll('\r\n', '\n');
   if (!normalized.includes('\r')) return normalized;
@@ -108,7 +124,7 @@ function throwIfVisibleTransportError(text) {
   }
 }
 
-export async function consumeVisibleResponse(response, onDelta, now = defaultNow) {
+export async function consumeVisibleResponse(response, onDelta, now = defaultNow, signal) {
   const startedAt = now();
   const resolved = await response;
   if (
@@ -142,6 +158,20 @@ export async function consumeVisibleResponse(response, onDelta, now = defaultNow
     if (onDelta) await onDelta(delta, fullText);
   };
 
+  const revealDelta = async (delta, priorText) => {
+    const sliceSize = 160;
+    if (!onDelta || delta.length <= sliceSize) {
+      await emitDelta(delta, priorText + delta);
+      return;
+    }
+    for (let offset = 0; offset < delta.length; offset += sliceSize) {
+      signal?.throwIfAborted?.();
+      const end = Math.min(offset + sliceSize, delta.length);
+      await emitDelta(delta.slice(offset, end), priorText + delta.slice(0, end));
+      if (end < delta.length) await wait(25, signal);
+    }
+  };
+
   const flushPendingDeltas = async () => {
     for (const [delta, fullText] of pendingDeltas) {
       await emitDelta(delta, fullText);
@@ -155,8 +185,9 @@ export async function consumeVisibleResponse(response, onDelta, now = defaultNow
     const nextText = frame.text;
     if (nextText === text) continue;
 
-    const delta = nextText.startsWith(text)
-      ? nextText.slice(text.length)
+    const priorText = text;
+    const delta = nextText.startsWith(priorText)
+      ? nextText.slice(priorText.length)
       : nextText;
     text = nextText;
 
@@ -167,7 +198,7 @@ export async function consumeVisibleResponse(response, onDelta, now = defaultNow
       continue;
     }
     await flushPendingDeltas();
-    await emitDelta(delta, text);
+    await revealDelta(delta, nextText.startsWith(priorText) ? priorText : '');
   }
 
   text = requireVisibleText(text);
@@ -185,13 +216,62 @@ function activeProfileId(context) {
   return String(context?.extensionSettings?.connectionManager?.selectedProfile ?? '');
 }
 
+export function scyllaStageOverride(model, url, { planner = false } = {}) {
+  let hostname = '';
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+  if (hostname !== 'scylla.love' && !hostname.endsWith('.scylla.love')) return undefined;
+  if (/gemini/iu.test(String(model))) {
+    return planner
+      ? {
+        custom_include_body: '{"thinking":{"type":"disabled"},"thinking_config":{"thinking_budget":0}}',
+      }
+      : undefined;
+  }
+  if (/^gpt-5/iu.test(String(model))) {
+    return {
+      custom_include_body: '',
+      custom_exclude_body: mergeExcludedFields('', [
+        'thinking', 'temperature', 'top_p', 'frequency_penalty',
+        'presence_penalty', 'logit_bias', 'stop',
+      ]),
+    };
+  }
+  return undefined;
+}
+
+export function mergeExcludedFields(value, addedFields) {
+  const fields = new Set();
+  const source = String(value ?? '').trim();
+  if (source) {
+    try {
+      const parsed = JSON.parse(source);
+      if (Array.isArray(parsed)) parsed.forEach((field) => fields.add(String(field)));
+      else if (parsed && typeof parsed === 'object') Object.keys(parsed).forEach((field) => fields.add(field));
+      else if (typeof parsed === 'string') fields.add(parsed);
+    } catch {
+      for (const line of source.split(/\r?\n/u)) {
+        const match = /^\s*(?:-\s*)?([^:#]+?)(?:\s*:.*)?\s*$/u.exec(line);
+        if (match) fields.add(match[1].trim());
+      }
+    }
+  }
+  for (const field of addedFields) fields.add(field);
+  return JSON.stringify([...fields]);
+}
+
 function requireProfileId(context, stage) {
   const id = String(stage.profileId || activeProfileId(context));
   if (!id) throw new Error('Choose a SillyTavern connection profile');
   return id;
 }
 
-function requestCurrentConnection({ context, stage, messages, maxTokens, includePreset, presetName, signal }) {
+function requestCurrentConnection({
+  context, stage, messages, maxTokens, includePreset, presetName, signal, overridePayload,
+}) {
   const settings = context.chatCompletionSettings;
   if (!settings || context.mainApi !== 'openai') {
     throw new Error('The current connection is not a Chat Completion connection');
@@ -213,6 +293,7 @@ function requestCurrentConnection({ context, stage, messages, maxTokens, include
     reverse_proxy: settings.reverse_proxy,
     proxy_password: settings.proxy_password,
     custom_prompt_post_processing: settings.custom_prompt_post_processing,
+    ...(overridePayload ?? {}),
   }, { presetName: includePreset ? presetName : undefined }, true, signal);
 }
 
@@ -238,6 +319,7 @@ export async function requestStageDetailed({
   presetName,
   signal,
   onText,
+  overridePayload,
 }) {
   if (!context || !stage) throw new TypeError('Stage request context is required');
 
@@ -252,6 +334,7 @@ export async function requestStageDetailed({
       chat_completion_source: 'custom',
       custom_url: stage.customUrl,
       ...(stage.secretId ? { secret_id: stage.secretId } : {}),
+      ...(overridePayload ?? {}),
     }, {
       presetName: includePreset ? presetName : undefined,
     }, true, signal);
@@ -264,9 +347,13 @@ export async function requestStageDetailed({
       includePreset,
       presetName,
       signal,
+      overridePayload,
     });
   } else {
-    const overridePayload = stage.model ? { model: stage.model } : {};
+    const stageOverride = {
+      ...(stage.model ? { model: stage.model } : {}),
+      ...(overridePayload ?? {}),
+    };
     response = context.ConnectionManagerRequestService.sendRequest(
       requireProfileId(context, stage),
       messages,
@@ -278,7 +365,7 @@ export async function requestStageDetailed({
         includeInstruct: false,
         signal,
       },
-      overridePayload,
+      stageOverride,
     );
   }
 
@@ -289,6 +376,8 @@ export async function requestStageDetailed({
         await onText(fullText);
       }
       : undefined,
+    undefined,
+    signal,
   );
   return visible;
 }

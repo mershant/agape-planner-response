@@ -56,6 +56,14 @@ or rewritten. It is the last prompt message the Response model sees.
 | Stop | Abort the active Response request through the operation's single signal. |
 | Failure after Planning | Keep the assistant shell and set its visible text exactly to `Response failed.`; add no retry or swipe behavior. |
 
+The Planner and Response choices remain separate through the actual HTTP
+requests. A model override changes only its own stage. When the selected
+Response model is incompatible with generation-only fields from the selected
+preset, the extension removes those incompatible fields for that Response
+request without changing the captured Response prompt messages. A GPT 5
+Response, for example, does not receive Gemini's `thinking` body or unsupported
+sampling fields.
+
 RP-01 is superseded. It incorrectly made Planning the whole Response request
 and excluded the normal preset and chat.
 

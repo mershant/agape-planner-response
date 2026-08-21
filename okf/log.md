@@ -7,6 +7,9 @@
 - **Latest-session proof**: Captured and activated the latest `Slave City` main chat through the rp-prompting snapshot tool. Normal, swipe, regenerate, Planner Stop, and Response Stop passed on FF5 MAX with Gemini 3.7 Flash through Scylla, with exact two-call counts for completed candidates.
 - **Native preset correction**: Replaced the combined preset system message with separate original-role messages inside one preset boundary and removed the extension's invented structural Planning validator.
 - **Latest-session recheck**: With separate native-role preset messages, normal, swipe, regenerate, Planner Stop, and Response Stop passed again on the copied latest session.
+- **Acceptance correction**: Replaced eventual-completion checks with an executable swipe gate requiring visible Planning within thirty seconds, multiple visible updates, ordered template structure, and exactly two requests. Scylla buffers Gemini semantic content into one final event, so the extension visibly reveals those exact bytes in ordered slices.
+- **Planner ownership correction**: Separated the preset's meaning as reference material for the later roleplay response from the Planner's actual job of filling the user template. The task now sits directly before the template and start command.
+- **Separate-model correction**: Traced mixed-model HTTP bodies and fixed FF5 Gemini generation fields leaking into a GPT Response override. Live Gemini Planner plus GPT Response completed with distinct model IDs and stage-compatible bodies.
 
 ## 2026-08-20
 
@@ -19,7 +22,7 @@
 - **Performance correction**: Opened the candidate before context assembly, moved Response assembly after Planning, throttled stream DOM writes to 50 ms, and removed the chat-wide mutation observer.
 - **Candidate proof**: Live normal, swipe, and regenerate checks each made exactly two Gemini 3.7 Flash requests. Normal opened in 342 ms with a 247 ms worst browser-heartbeat gap; swipe added one planned slot and regenerate replaced without changing chat length.
 - **Gemini output correction**: Made the Planner task authoritative over preset response commands. Three consecutive preset-context runs produced filled MAX Planning with two requests each.
-- **Latency evidence**: Candidate startup measured about 0.4 seconds and first visible preset-context Planning at 12.9 seconds. Disabling thinking, setting reasoning effort to none, and lowering the token allowance did not reduce the Scylla/Gemini first-token delay.
+- **Latency evidence**: Candidate startup measured about 0.4 seconds. Explicitly disabling Scylla Gemini thinking reduced some first-content measurements, but repeated full-packet runs still exceed five seconds and arrive as one semantic event after empty keepalives.
 - **Context correction**: Replaced the contextless Planner with David's task/history/template/start wrapper, full or depth-limited history, full-history-only Summaryception, and Minimal or one-block active-preset context.
 - **Live proof**: On the latest copied FF5 chat, Minimal produced 11,200 characters of filled MAX Planning and preset context produced 5,146 characters with 36 enabled prompts inside one `<preset>` block; each completed before a normal Gemini 3.7 Flash Response.
 - **Fix**: Changed the sole Planner message from `system` to `user` after reproducing Gemini 3.7 Flash's `contents is not specified` failure with the exact FF5 MAX prompt through Scylla.

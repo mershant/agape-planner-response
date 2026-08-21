@@ -38,18 +38,22 @@ test('native Planner packet separates task, preset, history, template, and start
   });
 
   assert.deepEqual(messages.map((message) => message.role), [
-    'system', 'system', 'system', 'assistant', 'user', 'system',
-    'system', 'user', 'system', 'system', 'system',
+    'system', 'system', 'assistant', 'user', 'system', 'system',
+    'user', 'system', 'system', 'system', 'system',
   ]);
-  assert.match(messages[0].content, /^<system>/);
-  assert.match(messages[1].content, /^<preset>/);
-  assert.match(messages[2].content, /^<prompt name="Rules">/);
-  assert.match(messages[3].content, /^<prompt name="Example">/);
-  assert.match(messages[4].content, /^<prompt name="Direction">/);
-  assert.equal(messages[5].content, '</preset>');
-  assert.equal(messages[6].content, '<history>');
-  assert.match(messages[7].content, /^<message name="Eloise">/);
-  assert.equal(messages[8].content, '</history>');
+  assert.match(messages[0].content, /^<preset>/);
+  assert.match(messages[0].content, /source material about the roleplay response/i);
+  assert.match(messages[0].content, /not the task/i);
+  assert.match(messages[1].content, /^<prompt name="Rules">/);
+  assert.match(messages[2].content, /^<prompt name="Example">/);
+  assert.match(messages[3].content, /^<prompt name="Direction">/);
+  assert.equal(messages[4].content, '</preset>');
+  assert.equal(messages[5].content, '<history>');
+  assert.match(messages[6].content, /^<message name="Eloise">/);
+  assert.equal(messages[7].content, '</history>');
+  assert.match(messages[8].content, /^<task>/);
+  assert.match(messages[8].content, /template is a form/i);
+  assert.match(messages[8].content, /or write the roleplay response/i);
   assert.match(messages[9].content, /^<planner_template>/);
   assert.match(messages[10].content, /^Begin Planning now\./);
   assert.equal(messages.filter((message) => message.content.startsWith('<preset>')).length, 1);

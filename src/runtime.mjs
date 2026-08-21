@@ -20,7 +20,11 @@ import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
 import { createRuntimeKernel, validateNativeUserTurn } from './runtime-kernel.mjs';
 import { normalizeSettings } from './settings.mjs';
-import { requestStageDetailed } from './transport.mjs';
+import {
+  mergeExcludedFields,
+  requestStageDetailed,
+  scyllaStageOverride,
+} from './transport.mjs';
 import { mountSettings } from './ui.mjs';
 
 const EXTENSION_KEY = 'agapePlannerResponse';
@@ -41,6 +45,29 @@ function responsePresetName(context) {
 function maxTokens(context) {
   const value = Number(context.chatCompletionSettings?.openai_max_tokens);
   return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 4096;
+}
+
+function stageTransportOverride(context, stage, planner = false) {
+  const selectedProfileId = stage.profileId
+    || context.extensionSettings?.connectionManager?.selectedProfile;
+  const profile = context.extensionSettings?.connectionManager?.profiles?.find(
+    (candidate) => candidate?.id === selectedProfileId,
+  );
+  const model = stage.model || profile?.model || context.getChatCompletionModel?.();
+  const url = stage.source === 'custom'
+    ? stage.customUrl
+    : profile?.['api-url'] || context.chatCompletionSettings?.custom_url;
+  const override = scyllaStageOverride(model, url, { planner });
+  if (!override?.custom_exclude_body) return override;
+  const presetName = profile?.preset || responsePresetName(context);
+  const preset = context.getPresetManager?.('openai')
+    ?.getCompletionPresetByName?.(presetName);
+  const existing = preset?.custom_exclude_body
+    ?? context.chatCompletionSettings?.custom_exclude_body;
+  return {
+    ...override,
+    custom_exclude_body: mergeExcludedFields(existing, JSON.parse(override.custom_exclude_body)),
+  };
 }
 
 function cleanResponse(text, final) {
@@ -112,6 +139,7 @@ async function runOneCandidate(
           includePreset: false,
           signal,
           onText,
+          overridePayload: stageTransportOverride(context, stage, true),
         });
       },
       captureResponseMessages: async (stage, signal, nativeMessage) => {
@@ -135,16 +163,20 @@ async function runOneCandidate(
           ? capture()
           : nativeMessage.withoutCandidate(capture);
       },
-      requestResponse: ({ stage, messages, signal, onText }) => requestStageDetailed({
-        context: getContext(),
-        stage,
-        messages,
-        maxTokens: responseMaxTokens,
-        includePreset: true,
-        presetName: responsePreset,
-        signal,
-        onText,
-      }),
+      requestResponse: ({ stage, messages, signal, onText }) => {
+        const context = getContext();
+        return requestStageDetailed({
+          context,
+          stage,
+          messages,
+          maxTokens: responseMaxTokens,
+          includePreset: true,
+          presetName: responsePreset,
+          signal,
+          onText,
+          overridePayload: stageTransportOverride(context, stage),
+        });
+      },
       cleanResponse: (text, final) => {
         const cleaned = cleanResponse(text, final);
         return final ? cleaned : balanceStreamingMarkdown(cleaned);

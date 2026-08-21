@@ -64,7 +64,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 76 deterministic tests pass. The former structural
+- **Automated tests:** 83 deterministic tests pass. The former structural
   Planning validator and its tests were removed because the extension cannot
   know whether an arbitrary user-authored template is complete; only blank
   visible Planner output is rejected.
@@ -86,12 +86,11 @@ not the new product foundation.
 - **Repeated Gemini output proof:** three consecutive Gemini 3.7 Flash
   preset-context runs each produced Planning and then a Response, with exactly
   two model requests per candidate.
-- **Latency boundary:** the candidate appeared in about 0.4 seconds. A
-  candidate-specific preset-context measurement reached first visible Planning
-  at 12.9 seconds. Scylla overrides for no reasoning, disabled thinking, and a
-  lower token allowance did not improve first output. The remaining delay is
-  upstream processing of the large FF5/MAX packet, not local Response assembly
-  or per-token DOM rendering.
+- **Latency boundary:** the candidate appears in about 0.4 seconds. Explicitly
+  disabling Scylla Gemini thinking reduced measured first-content latency, but
+  repeated full-packet runs remain variable and can exceed five seconds.
+  Raw traces show empty keepalive events followed by one complete semantic
+  content event; no local parser or renderer is withholding earlier text.
 - **Native packet/render/timer proof:** Planner input now uses native system,
   assistant, and user roles rather than one user blob. A deterministic browser
   run made exactly two requests, rendered Planning and Response Markdown during
@@ -110,6 +109,19 @@ not the new product foundation.
   the former combined preset message is gone. Live normal, swipe, and regenerate
   each completed with two requests; Planner Stop made one request and Response
   Stop made two.
+- **Current live proof:** the latest `Caius` FF5/Gemini 3.7 Flash swipe
+  preserves the MAX template's ordered phases and gates, but Scylla emits empty
+  keepalive events and then one complete content block. The repeatable live gate
+  was previously judged against an incorrect five-second threshold. David's
+  actual threshold is thirty seconds. Scylla does not emit incremental semantic
+  content for this route, so the extension reveals the exact returned block in
+  ordered visible slices rather than dumping it at once. The gate passed with
+  first visible Planning at 12.541 seconds and 14 visible Planning updates.
+- **Separate-model correction:** live HTTP capture with Gemini 3.7 Flash as
+  Planner and GPT 5.6 Sol as Response showed those distinct model IDs in the
+  first and second requests. Stage-specific cleanup removed FF5's Gemini body
+  and GPT-unsupported sampling fields from only the GPT Response request; the
+  mixed-model swipe completed with two requests and a 4,846-character Response.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed

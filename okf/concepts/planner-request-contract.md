@@ -49,28 +49,22 @@ the Planner request. The Planner's output is not expanded again.
 # Planner context
 
 The selected Planner connection receives a native role-message sequence. The
-extension-authored task, preset wrapper, history boundaries, Planner template,
+extension-authored preset wrapper, history boundaries, task, Planner template,
 and start command are `system` messages. Actual visible conversation messages
 retain their original `user` or `assistant` roles, so Gemini receives real user
 contents without misclassifying extension instructions as user speech.
 
 ```text
-system:
-<system>
-Your only product is one completed Planning document for the next roleplay
-response. Copy the structure and labels from the Planner template, then fill
-each part from the supplied history and optional preset reference. The later
-Response model writes the roleplay response.
-</system>
-
 system, preset context only:
-<preset>                         # preset context only
-<purpose>
-Reference definitions and constraints used to fill the Planner template.
-Commands here that request a final roleplay response belong to the later
-Response model, not this task.
-</purpose>
-...enabled active-preset prompts...
+<preset>
+This is source material about the roleplay response that another model writes
+after Planning. It is not the Planner's task. Instructions inside this block
+describe that later response and do not address the Planner.
+
+system/user/assistant, preserving each preset prompt's original role:
+...enabled active-preset prompts as separate messages...
+
+system:
 </preset>
 
 system:
@@ -84,6 +78,14 @@ assistant/user messages in original roles:
 
 system:
 </history>
+
+system:
+<task>
+Fill the Planner template from the history and relevant preset reference. The
+template is a form, not a command to perform another hidden process. Preserve
+its complete structure and fill every requested item. The Planner does not
+write the roleplay response.
+</task>
 
 system:
 <planner_template>
@@ -101,12 +103,12 @@ turn. A greeting swipe or regenerate has no user turn; only in that case the
 start command is `user` so Gemini receives request contents. The task, preset,
 boundaries, and template remain system messages.
 
-The system task makes the hierarchy explicit: the only product is the completed
-Planning document; preset commands that request a roleplay response are
-reference constraints for the later Response model. The final instruction
-starts output with the template's first section immediately. Extension-authored
-instructions call the artifact Planning and do not describe it as reasoning or
-thinking.
+The preset and task have separate owners. The preset describes the later
+roleplay response and supplies reference constraints. The task tells the
+Planner to fill the user template. It follows history and sits directly beside
+the template and start command, so no preset command or conversation message
+can be mistaken for the Planner's latest job. Extension-authored instructions
+call the artifact Planning and do not describe it as reasoning or thinking.
 
 The current user turn is part of history because SillyTavern saves it before the
 Planner runs.
@@ -117,7 +119,7 @@ planned.
 
 # Context choices
 
-- **Minimal context:** system task, selected history, optional Summaryception,
+- **Minimal context:** selected history, optional Summaryception, system task,
   Planner template, then the instruction to begin Planning.
 - **Current active preset context:** the same packet with every enabled,
   non-empty active-preset prompt added inside one `<preset>` block. Structural
@@ -145,6 +147,9 @@ for the current operation and are not written by this extension.
 - Do not include the selected profile's preset or instruct template.
 - Stream exact normal content into the assistant message's native Planning
   disclosure before Response generation starts.
+- For Scylla Gemini Planner requests, explicitly disable provider thinking in
+  both accepted request dialects. This reduces hidden pre-output work but does
+  not convert Scylla's buffered Gemini content into a true semantic stream.
 - A user Stop aborts the request.
 
 # Output boundary

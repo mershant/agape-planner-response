@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { consumeVisibleResponse, requestStage, requestStageDetailed } from '../src/transport.mjs';
+import {
+  consumeVisibleResponse,
+  mergeExcludedFields,
+  requestStage,
+  requestStageDetailed,
+  scyllaStageOverride,
+} from '../src/transport.mjs';
 
 function streamFrames(...frames) {
   return async function* generateFrames() {
@@ -38,6 +44,36 @@ test('streaming transport returns exact visible text, cumulative deltas, and tim
     ['Plan', 'Plan'],
     ['ning', 'Planning'],
   ]);
+});
+
+test('buffered provider content is visibly revealed in ordered exact slices', async () => {
+  const output = 'x'.repeat(401);
+  const visible = [];
+  async function* frames() {
+    yield { text: output };
+  }
+  const result = await consumeVisibleResponse(
+    Promise.resolve(() => frames()),
+    async (delta, fullText) => visible.push({ delta, fullText }),
+    () => 0,
+  );
+  assert.equal(result.text, output);
+  assert.deepEqual(visible.map((entry) => entry.delta.length), [160, 160, 81]);
+  assert.deepEqual(visible.map((entry) => entry.fullText.length), [160, 320, 401]);
+  assert.equal(visible.map((entry) => entry.delta).join(''), output);
+});
+
+test('Stop interrupts buffered-content reveal', async () => {
+  const controller = new AbortController();
+  async function* frames() {
+    yield { text: 'x'.repeat(401) };
+  }
+  await assert.rejects(() => consumeVisibleResponse(
+    Promise.resolve(() => frames()),
+    async () => controller.abort(),
+    () => 0,
+    controller.signal,
+  ), { name: 'AbortError' });
 });
 
 test('hidden state.reasoning never substitutes for visible text or deltas', async () => {
@@ -292,6 +328,62 @@ test('profile model override is the sendRequest override payload', async () => {
   assert.deepEqual(calls[0][4], { model: 'override-model' });
 });
 
+test('stage transport combines model and request-specific payload overrides', async () => {
+  const calls = [];
+  const context = {
+    extensionSettings: { connectionManager: { selectedProfile: 'planner' } },
+    ConnectionManagerRequestService: {
+      async sendRequest(...args) {
+        calls.push(args);
+        return { content: 'Planning' };
+      },
+    },
+  };
+  await requestStageDetailed({
+    context,
+    stage: { source: 'profile', profileId: 'planner', model: 'gemini-3.7-flash' },
+    messages: [{ role: 'system', content: 'Plan' }],
+    maxTokens: 100,
+    overridePayload: { custom_include_body: '{"thinking":{"type":"disabled"}}' },
+  });
+  assert.deepEqual(calls[0][4], {
+    model: 'gemini-3.7-flash',
+    custom_include_body: '{"thinking":{"type":"disabled"}}',
+  });
+});
+
+test('Scylla stage override isolates model-specific custom body settings', () => {
+  assert.deepEqual(
+    scyllaStageOverride('gemini-3.7-flash', 'https://proxy.scylla.love/v1', { planner: true }),
+    {
+      custom_include_body: '{"thinking":{"type":"disabled"},"thinking_config":{"thinking_budget":0}}',
+    },
+  );
+  assert.equal(
+    scyllaStageOverride('gemini-3.7-flash', 'https://proxy.scylla.love/v1'),
+    undefined,
+  );
+  assert.deepEqual(
+    scyllaStageOverride('gpt-5.6-sol', 'https://proxy.scylla.love/v1'),
+    {
+      custom_include_body: '',
+      custom_exclude_body: '["thinking","temperature","top_p","frequency_penalty","presence_penalty","logit_bias","stop"]',
+    },
+  );
+  assert.equal(scyllaStageOverride('gpt-5.6-sol', 'https://example.com/v1'), undefined);
+});
+
+test('model compatibility exclusions preserve existing preset exclusions', () => {
+  assert.equal(
+    mergeExcludedFields('["seed","temperature"]', ['thinking', 'temperature']),
+    '["seed","temperature","thinking"]',
+  );
+  assert.equal(
+    mergeExcludedFields('- seed\n- top_k', ['thinking']),
+    '["seed","top_k","thinking"]',
+  );
+});
+
 test('detailed stage request exposes visible first-delta and total metrics', async () => {
   const context = {
     extensionSettings: { connectionManager: { selectedProfile: 'planner' } },
@@ -378,4 +470,38 @@ test('current Chat Completion connection works without a saved Connection Manage
   assert.equal(calls[0][0].model, 'current-model');
   assert.equal(calls[0][0].custom_url, 'https://current.example/v1');
   assert.deepEqual(calls[0][1], { presetName: undefined });
+});
+
+test('current connection receives request-specific compatibility overrides', async () => {
+  const calls = [];
+  const context = {
+    mainApi: 'openai',
+    extensionSettings: { connectionManager: { selectedProfile: '' } },
+    chatCompletionSettings: {
+      chat_completion_source: 'custom',
+      custom_url: 'https://proxy.scylla.love/v1',
+    },
+    getChatCompletionModel: () => 'gpt-5.6-sol',
+    ChatCompletionService: {
+      async processRequest(...args) {
+        calls.push(args);
+        return { content: 'Response' };
+      },
+    },
+  };
+  const override = scyllaStageOverride(
+    'gpt-5.6-sol',
+    context.chatCompletionSettings.custom_url,
+  );
+  const result = await requestStageDetailed({
+    context,
+    stage: { source: 'profile', profileId: '', model: 'gpt-5.6-sol' },
+    messages: [{ role: 'system', content: 'Prompt' }],
+    maxTokens: 100,
+    overridePayload: override,
+  });
+  assert.equal(result.text, 'Response');
+  assert.equal(calls[0][0].custom_include_body, '');
+  assert.match(calls[0][0].custom_exclude_body, /"thinking"/u);
+  assert.match(calls[0][0].custom_exclude_body, /"top_p"/u);
 });

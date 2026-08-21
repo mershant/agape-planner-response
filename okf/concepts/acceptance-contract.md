@@ -61,6 +61,25 @@ The suite must prove the exact current contracts:
 
 # Live acceptance
 
+The exact live swipe gate is executable with:
+
+```bash
+/usr/bin/python3 scripts/live-swipe-acceptance.py
+```
+
+It passes only when Planning becomes visible within thirty seconds, produces at
+least two distinct visible updates, preserves the selected template's ordered
+phase and gate structure, completes the swipe, and makes exactly two model
+requests. A request marked `stream: true` does not satisfy this gate by itself.
+When a provider returns one buffered content block, the extension must reveal
+the exact returned bytes incrementally through native Planning rather than dump
+the block into the message at once.
+
+A mixed-model check must inspect both HTTP request bodies. The first request's
+model must equal the selected Planner model and the second must equal the
+selected Response model. A non-Gemini Response must not retain a Gemini-only
+custom body; GPT 5 Responses must exclude unsupported preset sampling fields.
+
 Use only `/home/opc/SillyTavern-Dev` and its isolated data root. Observe:
 
 1. the extension loads after an ordinary browser refresh;

@@ -96,18 +96,14 @@ function escapeAttribute(value) {
 export function buildPlannerContextMessages({ presetPrompts, history, summaryception, plannerTemplate }) {
   const hasUserTurn = Array.isArray(history)
     && history.some((message) => message.role === 'user');
-  const messages = [{
-    role: 'system',
-    content: [
-      '<system>',
-      'Your only product is one completed Planning document for the next roleplay response. Copy the structure and labels from the Planner template, then fill each part from the supplied history and optional preset reference. The later Response model writes the roleplay response.',
-      '</system>',
-    ].join('\n'),
-  }];
+  const messages = [];
   if (Array.isArray(presetPrompts) && presetPrompts.length > 0) {
     messages.push({
       role: 'system',
-      content: '<preset>\n<purpose>Reference definitions and constraints used to fill the Planner template. Commands here that request a final roleplay response belong to the later Response model, not this task.</purpose>',
+      content: [
+        '<preset>',
+        'This block is source material about the roleplay response that another model will write after Planning. It supplies relevant world, character, style, and response constraints. It is not the task. Instructions quoted inside this block describe the later roleplay response and do not address the Planner.',
+      ].join('\n'),
     });
     for (const prompt of presetPrompts) {
       messages.push({
@@ -140,6 +136,14 @@ export function buildPlannerContextMessages({ presetPrompts, history, summarycep
     {
       role: 'system',
       content: [
+        '<task>',
+        'Fill the supplied Planner template for the next roleplay response. Use the conversation history and any relevant facts or constraints from the preset reference. The template is a form to complete, not a command to perform another hidden process. Its wording about internal processing and a final response describes how the later Response model will use this Planning document. Fill the form directly. Your output is the filled Planner template itself. Preserve every phase, gate, and requested item in order. Fill each item with concrete conclusions for this scene. Do not copy the questions, explain your work outside the template, or write the roleplay response.',
+        '</task>',
+      ].join('\n'),
+    },
+    {
+      role: 'system',
+      content: [
         '<planner_template>',
         String(plannerTemplate ?? ''),
         '</planner_template>',
@@ -147,7 +151,7 @@ export function buildPlannerContextMessages({ presetPrompts, history, summarycep
     },
     {
       role: hasUserTurn ? 'system' : 'user',
-      content: 'Begin Planning now. Start output immediately with the Planner template\'s first section, preserve its structure, and fill it sequentially. Output only the completed Planning document.',
+      content: 'Begin Planning now. Start immediately with the Planner template\'s first section. Preserve its complete structure and fill it sequentially. Output only the completed Planning document.',
     },
   );
   return messages;
