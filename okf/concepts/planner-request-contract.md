@@ -1,10 +1,10 @@
 ---
 type: Model Request Contract
 title: Planner Request Contract
-description: Defines the exact contextual cross-provider request sent to the selected Planner model.
-tags: [planner, request, macros]
+description: Defines the exact contextual cross-provider request sent to the selected Planner model and the user-editable arrangement that assembles it.
+tags: [planner, request, macros, arrangement]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T20:53:59Z }
+generated: { by: opencode/claude-fable-5, at: 2026-09-05T13:13:45Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -30,6 +30,11 @@ sources:
     title: David's Planner context contract
     author: human:david
     last_modified: 2026-08-20
+  - id: david-arrangement-editor
+    resource: /sources/david-planner-arrangement-editor-2026-09-05.md
+    title: David's Planner arrangement editor direction
+    author: human:david
+    last_modified: 2026-09-05
 ---
 
 # Stored template
@@ -46,13 +51,66 @@ This native expansion includes SillyTavern variables and macros such as
 `{{getvar::...}}`, `{{roll::...}}`, and `{{trim}}`. Expansion occurs once before
 the Planner request. The Planner's output is not expanded again.
 
-# Planner context
+# Arrangement model
 
-The selected Planner connection receives a native role-message sequence. The
-extension-authored preset wrapper, history boundaries, task, Planner template,
-and start command are `system` messages. Actual visible conversation messages
-retain their original `user` or `assistant` roles, so Gemini receives real user
-contents without misclassifying extension instructions as user speech.
+The Planner packet is assembled from a user-editable ordered list of blocks —
+an **arrangement** — modeled on SillyTavern's prompt manager but
+simpler.[^david-arrangement-editor] Providers reject or blank on arrangement,
+not only content, and the user must be able to fix arrangement problems
+without a code change.
+
+There are two kinds of blocks:
+
+- **Slot blocks** are filled from live data at operation time and have no
+  editable body:
+  - **Preset** — the enabled active-preset prompts inside one `<preset>`
+    boundary, exactly as described under Context choices. Its on/off toggle
+    replaces the former Minimal-versus-preset dropdown: toggled off is
+    Minimal.
+  - **History** — the selected conversation messages inside one `<history>`
+    boundary. History mode (full or recent depth) and the Summaryception
+    option belong to this block and are saved per arrangement.
+  - **Planner template** — the user's literal template textbox, natively
+    expanded once, inside `<planner_template>`. This block can be reordered
+    but never deleted or disabled: without it the Planner has no form and
+    blank or junk output is guaranteed.
+- **Text blocks** carry user-editable text that receives the same single
+  native macro expansion as the template. The **task** and the **start
+  command** ship as text blocks whose default bodies are the exact wording
+  below. The user may add, edit, reorder, disable, or delete text blocks
+  freely.
+
+Every block has a name, an on/off toggle, an ordered position, and a role:
+`system`, `user`, `assistant`, or `auto`. `auto` reproduces the proven
+adaptive behavior — `system` normally, `user` only when selected history has
+no real user turn — and is the start command's default. A fixed role choice
+overrides `auto`. Conversation messages inside the History block always keep
+their original `user` or `assistant` roles regardless of the block's role
+setting, which applies only to the extension-authored `<history>` boundary
+messages.
+
+Arrangements are named, switchable presets.[^david-arrangement-editor] The
+extension ships one non-deletable **Default** arrangement that reproduces the
+packet below byte for byte; deterministic tests assert that identity so the
+editor cannot silently regress the live-proven layout. Users can create,
+rename, delete, switch, and reset arrangements. Saving or editing an
+arrangement never calls a model.
+
+Existing settings migrate automatically: `minimal` context becomes Default
+with the Preset block off, `preset` context becomes Default with it on, and
+the current history mode, depth, and Summaryception choices move onto the
+History block.
+
+Import and export of arrangements is deferred and not part of this contract.
+
+# Default arrangement
+
+The Default arrangement produces the proven packet. The selected Planner
+connection receives a native role-message sequence. The extension-authored
+preset wrapper, history boundaries, task, Planner template, and start command
+are `system` messages. Actual visible conversation messages retain their
+original `user` or `assistant` roles, so Gemini receives real user contents
+without misclassifying extension instructions as user speech.
 
 ```text
 system, preset context only:
@@ -119,10 +177,12 @@ planned.
 
 # Context choices
 
-- **Minimal context:** selected history, optional Summaryception, system task,
-  Planner template, then the instruction to begin Planning.
-- **Current active preset context:** the same packet with every enabled,
-  non-empty active-preset prompt added inside one `<preset>` block. Structural
+These choices live on the arrangement's slot blocks:
+
+- **Preset block off (Minimal):** selected history, optional Summaryception,
+  system task, Planner template, then the instruction to begin Planning.
+- **Preset block on:** the same packet with every enabled, non-empty
+  active-preset prompt added inside one `<preset>` block. Structural
   placeholders are omitted because history is supplied by `<history>`. A preset
   prompt identical to the Planner textbox is omitted so the template has one
   authoritative location.
@@ -177,3 +237,4 @@ but this repository must implement and test it independently.[^prior-bare-contra
 
 [^david-direction]: [David's simple Planner and Response direction](../sources/david-simple-planner-response-direction-2026-08-19.md)
 [^prior-bare-contract]: AGAPE Lite commit `4f99299`, used only as implementation reference.
+[^david-arrangement-editor]: [David's Planner arrangement editor direction](../sources/david-planner-arrangement-editor-2026-09-05.md)

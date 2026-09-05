@@ -31,6 +31,11 @@ sources:
     title: David's generation candidate and performance correction
     author: human:david
     last_modified: 2026-08-20
+  - id: david-arrangement-editor
+    resource: /sources/david-planner-arrangement-editor-2026-09-05.md
+    title: David's Planner arrangement editor direction
+    author: human:david
+    last_modified: 2026-09-05
 ---
 
 # Product
@@ -126,6 +131,9 @@ not the new product foundation.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed
   publication for installation on main.
+- **Planner arrangement editor:** directed by David on September 5 and recorded
+  in the Planner Request Contract; implementation is tracked as repository
+  tickets and has not started.
 
 Only this section owns changing implementation and acceptance status.
 
@@ -137,9 +145,9 @@ and two model connections:
 - enable or disable;
 - Planner connection: current or selected SillyTavern profile, or direct custom
   Chat Completion API;
-- Planner context: Minimal or current active preset;
-- Planner history: full or a configured recent-message depth;
-- optional Summaryception when full history is selected;
+- Planner arrangement: named, switchable block arrangements owned by the
+  [Planner Request Contract](planner-request-contract.md), carrying the preset
+  toggle, history mode and depth, and Summaryception option on their blocks;
 - Response connection: current or selected SillyTavern profile, or direct
   custom Chat Completion API;
 - literal custom Planner template.

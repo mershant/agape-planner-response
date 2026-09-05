@@ -1,5 +1,9 @@
 # Update Log
 
+## 2026-09-05
+
+- **Arrangement model**: Recorded David's Planner-only arrangement editor direction: an ordered, role-aware block list with user-added text blocks and named switchable arrangements, modeled on SillyTavern's prompt manager. The proven packet becomes the byte-identical, non-deletable Default arrangement; the Minimal-versus-preset dropdown becomes the Preset block's toggle; history depth and Summaryception move onto the History block per arrangement. Import/export deferred. Implementation moved to repository tickets.
+
 ## 2026-08-21
 
 - **Test release**: Published the rewritten host kernel as v0.4.1 for David's main-session testing after deterministic verification; final user acceptance remains pending.
