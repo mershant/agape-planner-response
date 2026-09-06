@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-09-06T04:28:32Z }
+generated: { by: opencode/grok-4.6, at: 2026-09-06T07:30:00Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -83,14 +83,15 @@ not the new product foundation.
   activated the latest `Slave Market` chat and the exact FF5 MAX + Gemini 3.7
   Flash path completed live.
 - **Candidate and responsiveness proof:** normal, swipe, and regenerate each made
-  exactly one Planner request and one Response request. Normal opened its
-  candidate in 342 ms, first Planning arrived after 8.67 seconds of provider
-  latency, and the browser heartbeat's largest observed gap was 247 ms during a
-  full MAX run. Swipe added one swipe slot without adding a chat message;
-  regenerate replaced the candidate without changing chat length.
+  exactly one Planner request. Before Response retries, each also made one
+  Response request. Normal opened its candidate in 342 ms, first Planning
+  arrived after 8.67 seconds of provider latency, and the browser heartbeat's
+  largest observed gap was 247 ms during a full MAX run. Swipe added one swipe
+  slot without adding a chat message; regenerate replaced the candidate without
+  changing chat length.
 - **Repeated Gemini output proof:** three consecutive Gemini 3.7 Flash
-  preset-context runs each produced Planning and then a Response, with exactly
-  two model requests per candidate.
+  preset-context runs each produced Planning and then a Response, with one
+  Planner request and one Response request per candidate on those runs.
 - **Latency boundary:** the candidate appears in about 0.4 seconds. Explicitly
   disabling Scylla Gemini thinking reduced measured first-content latency, but
   repeated full-packet runs remain variable and can exceed five seconds.
@@ -98,22 +99,22 @@ not the new product foundation.
   content event; no local parser or renderer is withholding earlier text.
 - **Native packet/render/timer proof:** Planner input now uses native system,
   assistant, and user roles rather than one user blob. A deterministic browser
-  run made exactly two requests, rendered Planning and Response Markdown during
-  streaming, stored 3.687 seconds for a 3.831-second operation, displayed
-  `3.7s`, and recorded first Planning at 892 ms.
+  run made one Planner request and one Response request, rendered Planning and
+  Response Markdown during streaming, stored 3.687 seconds for a 3.831-second
+  operation, displayed `3.7s`, and recorded first Planning at 892 ms.
 - **Rewritten-kernel live proof:** the latest August 21 `Slave City` snapshot
   completed normal, swipe, and regenerate through the reimplemented proven host
-  kernel. Each completed candidate made exactly one Planner request and one
-  Response request. Native Stop during Planner made one request and rolled back;
-  native Stop during Response made two requests, kept Planning, and made no
-  third request. Normal produced 7,706 characters of Planning and 6,591
-  characters of Response, displayed `33.0s`, and stored independent Planner and
-  Response first-delta/total metrics.
+  kernel. Each completed candidate made exactly one Planner request and, on
+  those runs, one Response request. Native Stop during Planner made one request
+  and rolled back; native Stop during Response made two requests, kept
+  Planning, and made no third request. Normal produced 7,706 characters of
+  Planning and 6,591 characters of Response, displayed `33.0s`, and stored
+  independent Planner and Response first-delta/total metrics.
 - **Native preset correction:** each enabled preset prompt is now its
   own original-role message between one `<preset>` opening and closing boundary;
   the former combined preset message is gone. Live normal, swipe, and regenerate
-  each completed with two requests; Planner Stop made one request and Response
-  Stop made two.
+  each completed with one Planner request and one Response request; Planner Stop
+  made one request and Response Stop made two.
 - **Current live proof:** the latest `Caius` FF5/Gemini 3.7 Flash swipe
   preserves the MAX template's ordered phases and gates, but Scylla emits empty
   keepalive events and then one complete content block. The repeatable live gate
@@ -126,7 +127,14 @@ not the new product foundation.
   Planner and GPT 5.6 Sol as Response showed those distinct model IDs in the
   first and second requests. Stage-specific cleanup removed FF5's Gemini body
   and GPT-unsupported sampling fields from only the GPT Response request; the
-  mixed-model swipe completed with two requests and a 4,846-character Response.
+  mixed-model swipe completed with one Planner request, one Response request,
+  and a 4,846-character Response.
+- **Response retry:** written, deterministically tested, and observed live in
+  isolated SillyTavern Dev. A forced 50,000-word threshold with one retry made
+  one Planner request and two identical Response requests, then kept the last
+  short reply. A later swipe with retries off made one Planner request and one
+  Response request. Planning bytes on the retry path were identical across
+  both Response attempts.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed
@@ -155,6 +163,7 @@ and two model connections:
   toggle, history mode and depth, and Summaryception option on their blocks;
 - Response connection: current or selected SillyTavern profile, or direct
   custom Chat Completion API;
+- Response retry: minimum word count, default 100, and retry count, default 5;
 - literal custom Planner template.
 
 Each connection has one optional model override. When it is blank, a selected

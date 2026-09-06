@@ -42,6 +42,26 @@ test('settings contain the safe Default arrangement schema', () => {
     ],
   }]);
   assert.equal(DEFAULT_SETTINGS.response.source, 'profile');
+  assert.equal(DEFAULT_SETTINGS.response.minWords, 100);
+  assert.equal(DEFAULT_SETTINGS.response.retryCount, 5);
+});
+
+test('Response min-words and retry-count are normalized without inventing extra fields', () => {
+  const settings = normalizeSettings({
+    response: { minWords: 12.9, retryCount: 0 },
+  });
+  assert.equal(settings.response.minWords, 12);
+  assert.equal(settings.response.retryCount, 0);
+
+  const clamped = normalizeSettings({
+    response: { minWords: -4, retryCount: 9 },
+  });
+  assert.equal(clamped.response.minWords, 0);
+  assert.equal(clamped.response.retryCount, 9);
+
+  const fallback = normalizeSettings({ response: { minWords: 'nope', retryCount: null } });
+  assert.equal(fallback.response.minWords, 100);
+  assert.equal(fallback.response.retryCount, 5);
 });
 
 test('existing Planner context settings migrate onto Default arrangement blocks', () => {

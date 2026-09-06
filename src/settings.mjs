@@ -60,7 +60,7 @@ export const DEFAULT_SETTINGS = deepFreeze({
     activeArrangement: 'Default',
     arrangements: [defaultArrangement()],
   },
-  response: { ...DEFAULT_STAGE },
+  response: { ...DEFAULT_STAGE, minWords: 100, retryCount: 5 },
 });
 
 const stringValue = (value) => typeof value === 'string' ? value : '';
@@ -73,6 +73,14 @@ function normalizeDepth(value) {
   return Number.isFinite(depth)
     ? Math.min(100, Math.max(0, Math.trunc(depth)))
     : 5;
+}
+
+function normalizeCount(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const count = Number(value);
+  return Number.isFinite(count)
+    ? Math.max(0, Math.trunc(count))
+    : fallback;
 }
 
 function normalizeHistoryOptions(source) {
@@ -219,6 +227,10 @@ export function normalizeSettings(value) {
     enabled: typeof source.enabled === 'boolean' ? source.enabled : false,
     plannerPrompt: stringValue(source.plannerPrompt),
     planner: normalizePlanner(source.planner),
-    response: normalizeStage(source.response),
+    response: {
+      ...normalizeStage(source.response),
+      minWords: normalizeCount(objectValue(source.response).minWords, 100),
+      retryCount: normalizeCount(objectValue(source.response).retryCount, 5),
+    },
   };
 }

@@ -87,6 +87,10 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     const prefix = `agape-${stageName}`;
     byId(`${prefix}-source`).value = stage.source;
     byId(`${prefix}-model`).value = stage.model;
+    if (stageName === 'response') {
+      byId('agape-response-min-words').value = String(stage.minWords);
+      byId('agape-response-retry-count').value = String(stage.retryCount);
+    }
     byId(`${prefix}-custom-url`).value = stage.customUrl;
     fillProfileSelect(byId(`${prefix}-profile`), context, stage.profileId);
     root.querySelector(`[data-stage-panel="${stageName}-profile"]`).hidden = stage.source !== 'profile';
@@ -290,6 +294,17 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
       renderStage(stageName);
     });
   }
+
+  byId('agape-response-min-words').addEventListener('change', (event) => {
+    settings.response.minWords = event.currentTarget.valueAsNumber;
+    persist();
+    renderStage('response');
+  });
+  byId('agape-response-retry-count').addEventListener('change', (event) => {
+    settings.response.retryCount = event.currentTarget.valueAsNumber;
+    persist();
+    renderStage('response');
+  });
 
   const applyPlannerEdit = (edit, { render = true } = {}) => {
     try {

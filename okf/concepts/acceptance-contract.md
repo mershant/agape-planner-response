@@ -4,7 +4,7 @@ title: Acceptance Contract
 description: Separates deterministic proof, live host proof, user acceptance, and release.
 tags: [testing, acceptance, release]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-21T04:32:19Z }
+generated: { by: opencode/grok-4.6, at: 2026-09-06T07:30:00Z }
 ---
 
 # Evidence states
@@ -34,8 +34,10 @@ The suite must prove the exact current contracts:
 5. Response receives the unchanged normal SillyTavern request plus exact
    Planning as its final `system` message.
 6. Each successful normal, swipe, or regenerate candidate makes exactly one
-   Planner request and one Response request; no failure or cancellation path
-   makes more than one of either.
+   Planner request. After Planning it makes one Response request plus up to
+   the configured number of identical retries when that Response is blank or
+   shorter than the minimum word count. Stop during any Response attempt
+   prevents later attempts. Planner is never retried.
 7. Visible Planning completes in the native Planning disclosure before Response text begins
    in the same assistant message.
 8. Stop cancels the active model and prevents later stages.
@@ -69,8 +71,10 @@ The exact live swipe gate is executable with:
 
 It passes only when Planning becomes visible within thirty seconds, produces at
 least two distinct visible updates, preserves the selected template's ordered
-phase and gate structure, completes the swipe, and makes exactly two model
-requests. A request marked `stream: true` does not satisfy this gate by itself.
+phase and gate structure, completes the swipe, and makes exactly one Planner
+request. A first-acceptable Response makes one Response request; a blank or
+too-short Response may add identical retries. A request marked `stream: true`
+does not satisfy this gate by itself.
 When a provider returns one buffered content block, the extension must reveal
 the exact returned bytes incrementally through native Planning rather than dump
 the block into the message at once.
@@ -89,8 +93,9 @@ Use only `/home/opc/SillyTavern-Dev` and its isolated data root. Observe:
    the final Response message beneath all active preset prompts;
 5. Stop during Planner and Stop during Response each cancel cleanly;
 6. no request or file touches David's main SillyTavern.
-7. normal, swipe, and regenerate each show exactly two model requests in network
-   inspection, and the page remains interactive during full-MAX Planning.
+7. normal, swipe, and regenerate each show exactly one Planner request in
+   network inspection. A first-acceptable Response shows one Response request.
+   The page remains interactive during full-MAX Planning.
 8. repeated Gemini 3.7 Flash preset-context runs produce filled template
    structure rather than a roleplay response; first-visible-Planning latency is
    reported separately from local candidate startup.

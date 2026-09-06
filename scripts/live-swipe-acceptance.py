@@ -153,6 +153,8 @@ def main():
                     customUrl: '',
                     secretId: '',
                     model: responseModel,
+                    minWords: 0,
+                    retryCount: 0,
                 };
                 context.saveSettingsDebounced();
                 const message = context.chat.at(-1);

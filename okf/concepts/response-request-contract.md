@@ -4,7 +4,7 @@ title: Response Request Contract
 description: Owns the accepted normal SillyTavern Response prompt with exact Planning last.
 tags: [response, request, active-preset]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-08-20T09:07:29Z }
+generated: { by: opencode/grok-4.6, at: 2026-09-06T07:30:00Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -50,11 +50,12 @@ or rewritten. It is the last prompt message the Response model sees.
 | Model | One optional Response model override; otherwise use the connection profile's model. |
 | Token handling | Use the selected Response preset's normal allowance. |
 | Streaming | Stream ordinary visible content. |
-| Output acceptance | Any nonblank normal model content; preserve exact content. A provider's documented transport-error envelope remains a failed request. |
+| Output acceptance | A Response is acceptable when it is nonblank and at least the configured minimum word count, default 100. Words are counted by a simple whitespace split. Preserve exact acceptable content. A provider's documented transport-error envelope remains a failed request, not model content. |
+| Response retries | Blank or too-short Responses are retried automatically. Retry count is configurable, default 5. Each attempt sends the identical Response request: no nudge text, no prompt changes, and the exact Planning bytes reused. The Planner is never re-run. |
 | Native placement | Planner output completes in native Planning before Response text begins in the same assistant message. |
 | Provider-hidden reasoning | Never replace or overwrite Planner output with Response-provider hidden reasoning. |
-| Stop | Abort the active Response request through the operation's single signal. |
-| Failure after Planning | Keep the assistant shell and set its visible text exactly to `Response failed.`; add no retry or swipe behavior. |
+| Stop | Abort the active Response request through the operation's single signal. Stop during any attempt ends the retry loop; no further attempts. |
+| Failure after Planning | If every attempt is blank or a failed transport, keep the assistant shell and set its visible text exactly to `Response failed.` If retries run out after a short-but-nonblank attempt, keep that last attempt as the visible Response. |
 
 The Planner and Response choices remain separate through the actual HTTP
 requests. A model override changes only its own stage. When the selected

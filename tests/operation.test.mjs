@@ -3,6 +3,40 @@ import test from 'node:test';
 
 import { runPlannerResponse } from '../src/operation.mjs';
 
+function retryOperation({
+  events = [],
+  planner = async () => 'Planning',
+  capture = async () => [{ role: 'system', content: 'Normal prompt' }],
+  response,
+  signal = new AbortController().signal,
+  minWords = 3,
+  retryCount = 2,
+} = {}) {
+  const nativeMessage = {
+    async setPlanning() {},
+    async completePlanning() { events.push('planning-complete'); },
+    async setResponse(text) { events.push(['response', text]); },
+    async commitResponse(text) { events.push(['response-complete', text]); },
+    async failResponse(text) { events.push(['response-failed', text]); },
+    async rollback() { events.push('rollback'); },
+    async commitStoppedResponse(text) { events.push(['response-stopped', text]); },
+  };
+  return runPlannerResponse({
+    settings: {
+      plannerPrompt: 'Prompt',
+      planner: { source: 'profile' },
+      response: { source: 'profile', minWords, retryCount },
+    },
+    substituteParams: (text) => text,
+    createMessage: async () => nativeMessage,
+    requestPlanner: planner,
+    captureResponseMessages: capture,
+    requestResponse: response,
+    cleanResponse: (text) => text,
+    signal,
+  });
+}
+
 test('one Send visibly completes Planning before Response in the same message', async () => {
   const events = [];
   const nativeMessage = {
@@ -23,7 +57,7 @@ test('one Send visibly completes Planning before Response in the same message', 
     settings: {
       plannerPrompt: '{{getvar::state}}',
       planner: { source: 'profile' },
-      response: { source: 'profile' },
+      response: { source: 'profile', minWords: 0, retryCount: 0 },
     },
     substituteParams(prompt) {
       events.push(['expand', prompt]);
@@ -86,7 +120,13 @@ test('one Send visibly completes Planning before Response in the same message', 
 test('Planner and Response requests retain their separate stage settings', async () => {
   const seen = [];
   const planner = { source: 'profile', profileId: 'planner-profile', model: 'planner-model' };
-  const response = { source: 'profile', profileId: 'response-profile', model: 'response-model' };
+  const response = {
+    source: 'profile',
+    profileId: 'response-profile',
+    model: 'response-model',
+    minWords: 0,
+    retryCount: 0,
+  };
   await runPlannerResponse({
     settings: { plannerPrompt: 'Template', planner, response },
     substituteParams: (text) => text,
@@ -240,7 +280,7 @@ test('provider cancellation wording is a Response failure unless Stop aborted th
     settings: {
       plannerPrompt: 'Prompt',
       planner: { source: 'profile' },
-      response: { source: 'profile' },
+      response: { source: 'profile', retryCount: 0 },
     },
     substituteParams: (text) => text,
     createMessage: async () => ({
@@ -266,7 +306,7 @@ test('Response failure keeps completed Planning and writes the fixed failure tex
     settings: {
       plannerPrompt: 'Prompt',
       planner: { source: 'profile' },
-      response: { source: 'profile' },
+      response: { source: 'profile', retryCount: 0 },
     },
     substituteParams: (text) => text,
     createMessage: async () => ({
@@ -310,4 +350,148 @@ test('blank Planner output removes its shell and never starts Response', async (
 
   assert.equal(rolledBack, true);
   assert.equal(responseStarted, false);
+});
+
+test('blank and short Responses re-send the identical request until an acceptable one arrives', async () => {
+  const events = [];
+  const requests = [];
+  const plannerCalls = [];
+  const replies = ['', 'one two', 'one two three four'];
+  const planning = 'Exact Planning bytes';
+  const result = await retryOperation({
+    events,
+    planner: async () => {
+      plannerCalls.push(1);
+      return planning;
+    },
+    capture: async () => [{ role: 'system', content: 'Normal prompt' }],
+    response: async ({ messages, onText }) => {
+      requests.push(messages);
+      const text = replies[requests.length - 1];
+      if (text) await onText(text);
+      return text;
+    },
+  });
+
+  assert.equal(plannerCalls.length, 1);
+  assert.equal(requests.length, 3);
+  assert.deepEqual(requests[0], requests[1]);
+  assert.deepEqual(requests[1], requests[2]);
+  assert.deepEqual(requests[0], [
+    { role: 'system', content: 'Normal prompt' },
+    { role: 'system', content: planning },
+  ]);
+  assert.equal(result.planning, planning);
+  assert.equal(result.response, 'one two three four');
+  assert.deepEqual(events, [
+    'planning-complete',
+    ['response', 'one two'],
+    ['response', 'one two three four'],
+    ['response-complete', 'one two three four'],
+  ]);
+});
+
+test('an acceptable first Response does not retry', async () => {
+  const events = [];
+  let responseCalls = 0;
+  const result = await retryOperation({
+    events,
+    response: async () => {
+      responseCalls += 1;
+      return 'one two three four';
+    },
+  });
+  assert.equal(responseCalls, 1);
+  assert.equal(result.response, 'one two three four');
+  assert.deepEqual(events, [
+    'planning-complete',
+    ['response', 'one two three four'],
+    ['response-complete', 'one two three four'],
+  ]);
+});
+
+test('the last short-but-nonblank Response is kept when retries run out', async () => {
+  const events = [];
+  let responseCalls = 0;
+  const result = await retryOperation({
+    events,
+    retryCount: 2,
+    response: async () => {
+      responseCalls += 1;
+      return `short ${responseCalls}`;
+    },
+  });
+  assert.equal(responseCalls, 3);
+  assert.equal(result.response, 'short 3');
+  assert.deepEqual(events, [
+    'planning-complete',
+    ['response', 'short 1'],
+    ['response', 'short 2'],
+    ['response', 'short 3'],
+    ['response-complete', 'short 3'],
+  ]);
+});
+
+test('all-blank Responses show Response failed after the last attempt', async () => {
+  const events = [];
+  let responseCalls = 0;
+  await assert.rejects(() => retryOperation({
+    events,
+    retryCount: 1,
+    response: async () => {
+      responseCalls += 1;
+      return '  ';
+    },
+  }), /blank visible content/i);
+  assert.equal(responseCalls, 2);
+  assert.deepEqual(events, [
+    'planning-complete',
+    ['response-failed', 'Response failed.'],
+  ]);
+});
+
+test('Stop during a retry aborts the loop with no further Response requests', async () => {
+  const events = [];
+  const controller = new AbortController();
+  let responseCalls = 0;
+  const result = await retryOperation({
+    events,
+    retryCount: 5,
+    signal: controller.signal,
+    response: async () => {
+      responseCalls += 1;
+      if (responseCalls === 2) {
+        controller.abort();
+        throw controller.signal.reason;
+      }
+      return 'one two';
+    },
+  });
+  assert.equal(responseCalls, 2);
+  assert.equal(result.stopped, true);
+  assert.equal(result.planning, 'Planning');
+  assert.deepEqual(events, [
+    'planning-complete',
+    ['response', 'one two'],
+    ['response-stopped', 'one two'],
+  ]);
+});
+
+test('a later transport failure still keeps the last short-but-nonblank Response', async () => {
+  const events = [];
+  let responseCalls = 0;
+  const result = await retryOperation({
+    events,
+    retryCount: 1,
+    response: async () => {
+      responseCalls += 1;
+      if (responseCalls === 1) return 'one two';
+      throw new Error('provider failed');
+    },
+  });
+  assert.equal(responseCalls, 2);
+  assert.equal(result.response, 'one two');
+  assert.equal(result.planning, 'Planning');
+  assert.deepEqual(events.at(-1), ['response-complete', 'one two']);
+  assert.equal(events.includes('planning-complete'), true);
 });

@@ -4,6 +4,8 @@ import test from 'node:test';
 import {
   appendPlanningToResponse,
   buildPlannerMessages,
+  countWords,
+  isAcceptableResponse,
   requireVisibleText,
 } from '../src/contracts.mjs';
 
@@ -72,4 +74,19 @@ test('Response keeps normal SillyTavern messages and receives exact Planning las
 test('blank visible model content is rejected without rewriting nonblank bytes', () => {
   assert.equal(requireVisibleText('  exact\n'), '  exact\n');
   assert.throws(() => requireVisibleText(' \n\t'), /blank visible content/i);
+});
+
+test('Response words are counted by a simple whitespace split', () => {
+  assert.equal(countWords(''), 0);
+  assert.equal(countWords(' \n\t '), 0);
+  assert.equal(countWords('one'), 1);
+  assert.equal(countWords('  one   two\nthree\tfour  '), 4);
+});
+
+test('a Response is unacceptable when blank or shorter than the minimum word count', () => {
+  assert.equal(isAcceptableResponse('', 0), false);
+  assert.equal(isAcceptableResponse(' \n', 0), false);
+  assert.equal(isAcceptableResponse('one two', 3), false);
+  assert.equal(isAcceptableResponse('one two three', 3), true);
+  assert.equal(isAcceptableResponse('one two three four', 3), true);
 });

@@ -81,7 +81,11 @@
         </div>
         <label for="agape-response-model">Model override</label>
         <input id="agape-response-model" class="text_pole" type="text" placeholder="Blank uses the profile model">
-        <small>The current profile and preset are used by default. A selected profile applies only while that Send runs.</small>
+        <label for="agape-response-min-words">Minimum Response words</label>
+        <input id="agape-response-min-words" class="text_pole" type="number" min="0" step="1" value="100">
+        <label for="agape-response-retry-count">Response retries</label>
+        <input id="agape-response-retry-count" class="text_pole" type="number" min="0" step="1" value="5">
+        <small>A blank or too-short Response is sent again with the same request. Planning is never re-run. Saving these values never calls a model.</small>
       </section>
     </div>
   </div>

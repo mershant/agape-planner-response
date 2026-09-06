@@ -1,6 +1,7 @@
 import {
   appendPlanningToResponse,
   buildPlannerRequest,
+  isAcceptableResponse,
   requireVisibleText,
 } from './contracts.mjs';
 import { createThrottledUpdater } from './throttled-updater.mjs';
@@ -69,28 +70,62 @@ export async function runPlannerResponse({
     );
     signal?.throwIfAborted?.();
     const responseMessages = appendPlanningToResponse(normalMessages, planningText);
-    const responseResult = await requestResponse({
-      stage: settings.response,
-      messages: responseMessages,
-      signal,
-      onText: (text) => {
-        responseText = cleanResponse(text, false);
-        responseUpdates.schedule(responseText);
-      },
-    });
-    const response = typeof responseResult === 'string'
-      ? responseResult
-      : responseResult?.text;
-    responseText = requireVisibleText(cleanResponse(response, true));
+    const minWords = settings.response?.minWords ?? 100;
+    const maxAttempts = 1 + (settings.response?.retryCount ?? 5);
+    let lastNonblank = '';
+    let lastNonblankResult = null;
+    let lastError = null;
+    let acceptedText = null;
+    let acceptedResult = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      signal?.throwIfAborted?.();
+      try {
+        const responseResult = await requestResponse({
+          stage: settings.response,
+          messages: structuredClone(responseMessages),
+          signal,
+          onText: (text) => {
+            responseText = cleanResponse(text, false);
+            responseUpdates.schedule(responseText);
+          },
+        });
+        const response = typeof responseResult === 'string'
+          ? responseResult
+          : responseResult?.text;
+        const cleaned = cleanResponse(response, true);
+        if (isAcceptableResponse(cleaned, minWords)) {
+          acceptedText = cleaned;
+          acceptedResult = responseResult;
+          break;
+        }
+        if (typeof cleaned === 'string' && cleaned.trim() !== '') {
+          lastNonblank = cleaned;
+          lastNonblankResult = responseResult;
+          responseText = cleaned;
+          if (attempt < maxAttempts - 1) await responseUpdates.flush(cleaned);
+        }
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        lastError = error;
+      }
+    }
+
+    const committedText = acceptedText ?? lastNonblank;
+    const committedResult = acceptedText !== null ? acceptedResult : lastNonblankResult;
+    if (!committedText) {
+      throw lastError ?? new Error('Model returned blank visible content');
+    }
+    responseText = committedText;
     await responseUpdates.flush(responseText);
-    await nativeMessage.commitResponse(responseText, responseResult?.metrics ?? responseResult);
+    await nativeMessage.commitResponse(responseText, committedResult?.metrics ?? committedResult);
     return {
       planning: planningText,
       response: responseText,
       stopped: false,
       metrics: {
         planner: planningResult?.metrics ?? planningResult ?? null,
-        response: responseResult?.metrics ?? responseResult ?? null,
+        response: committedResult?.metrics ?? committedResult ?? null,
       },
     };
   } catch (error) {

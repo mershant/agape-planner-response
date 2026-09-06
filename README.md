@@ -11,9 +11,11 @@ native SillyTavern Send
 -> visible assistant response
 ```
 
-Normal, swipe, and regenerate each run their own two-request operation: one
-Planner request followed by one Response request. A swipe stores its own
-Planning with that swipe. Continue remains native SillyTavern behavior.
+Normal, swipe, and regenerate each run their own operation: one Planner
+request followed by one Response request, plus identical Response retries
+when that reply is blank or shorter than the minimum word count. A swipe
+stores its own Planning with that swipe. Continue remains native SillyTavern
+behavior.
 
 It does not inherit AGAPE Lite's abandoned Planner architecture.
 
@@ -24,7 +26,7 @@ Summaryception can be included only with full history.
 
 The preset block is reference material for the later roleplay response. A
 separate task after history tells the Planner to fill the user's template. The
-Planner and Response profile/model choices remain separate through their two
+Planner and Response profile/model choices remain separate through their
 HTTP requests, including model-specific request-body cleanup when the active
 preset was configured for a different model family.
 

@@ -7,6 +7,16 @@ export function requireVisibleText(value) {
   return value;
 }
 
+export function countWords(value) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text === '' ? 0 : text.split(/\s+/).length;
+}
+
+export function isAcceptableResponse(value, minimumWords) {
+  if (typeof value !== 'string' || value.trim() === '') return false;
+  return countWords(value) >= minimumWords;
+}
+
 export function buildPlannerMessages(prompt, substituteParams, plannerContext = {}) {
   return buildPlannerRequest(prompt, substituteParams, plannerContext).messages;
 }
