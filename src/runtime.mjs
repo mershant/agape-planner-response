@@ -19,7 +19,7 @@ import { balanceStreamingMarkdown } from './streaming-markdown.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
 import { createRuntimeKernel, validateNativeUserTurn } from './runtime-kernel.mjs';
-import { normalizeSettings } from './settings.mjs';
+import { getActivePlannerContext, normalizeSettings } from './settings.mjs';
 import {
   mergeExcludedFields,
   requestStageDetailed,
@@ -103,11 +103,12 @@ async function runOneCandidate(
       substituteParams: (prompt) => getContext().substituteParams(prompt),
       collectPlannerContext: async (plannerSettings) => {
         const context = getContext();
+        const plannerContext = getActivePlannerContext(plannerSettings);
         const promptOrder = promptManager.getPromptOrderForCharacter?.(
           promptManager.activeCharacter,
         ) ?? [];
         return {
-          presetPrompts: plannerSettings.contextMode === 'preset'
+          presetPrompts: plannerContext.contextMode === 'preset'
             ? collectActivePresetPrompts({
               prompts: context.chatCompletionSettings?.prompts,
               promptOrder,
@@ -117,9 +118,9 @@ async function runOneCandidate(
             : [],
           history: collectPlannerHistory(
             plannerHistorySource,
-            plannerSettings,
+            plannerContext,
           ),
-          summaryception: plannerSettings.includeSummaryception
+          summaryception: plannerContext.includeSummaryception
             ? extractSummaryceptionText(context.chatMetadata)
             : '',
         };

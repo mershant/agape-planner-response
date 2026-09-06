@@ -1,5 +1,9 @@
 # Update Log
 
+## 2026-09-06
+
+- **Arrangement storage**: Added the named Planner arrangement schema, a protected Default and template slot, active selection, legacy context migration, and safe normalization with deterministic tests. Existing controls and runtime reads now persist through the active arrangement while packet ordering and the full editor remain later ticket work.
+
 ## 2026-09-05
 
 - **Arrangement model**: Recorded David's Planner-only arrangement editor direction: an ordered, role-aware block list with user-added text blocks and named switchable arrangements, modeled on SillyTavern's prompt manager. The proven packet becomes the byte-identical, non-deletable Default arrangement; the Minimal-versus-preset dropdown becomes the Preset block's toggle; history depth and Summaryception move onto the History block per arrangement. Import/export deferred. Implementation moved to repository tickets.

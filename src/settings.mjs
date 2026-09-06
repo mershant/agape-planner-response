@@ -1,66 +1,220 @@
 const CONNECTION_SOURCE = new Set(['profile', 'custom']);
+const BLOCK_ROLES = new Set(['system', 'user', 'assistant', 'auto']);
+const SLOT_NAMES = new Set(['preset', 'history', 'template']);
 
-const DEFAULT_STAGE = Object.freeze({
+const TASK_BODY = `<task>
+Fill the Planner template from the history and relevant preset reference. The
+template is a form, not a command to perform another hidden process. Preserve
+its complete structure and fill every requested item. The Planner does not
+write the roleplay response.
+</task>`;
+
+const START_BODY = `Begin Planning now. Start output immediately with the Planner template's first
+section, preserve its structure, and fill it sequentially. Output only the
+completed Planning document.`;
+
+const DEFAULT_STAGE = {
   source: 'profile',
   profileId: '',
   customUrl: '',
   secretId: '',
   model: '',
-});
+};
 
-const DEFAULT_PLANNER = Object.freeze({
-  ...DEFAULT_STAGE,
-  contextMode: 'minimal',
-  historyMode: 'full',
-  historyDepth: 5,
-  includeSummaryception: true,
-});
+function defaultArrangement({
+  presetEnabled = false,
+  historyMode = 'full',
+  historyDepth = 5,
+  includeSummaryception = true,
+} = {}) {
+  return {
+    name: 'Default',
+    blocks: [
+      { kind: 'slot', slot: 'preset', name: 'Preset', enabled: presetEnabled, order: 0, role: 'system' },
+      {
+        kind: 'slot',
+        slot: 'history',
+        name: 'History',
+        enabled: true,
+        order: 1,
+        role: 'system',
+        historyMode,
+        historyDepth,
+        includeSummaryception,
+      },
+      { kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
+      { kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
+      { kind: 'text', name: 'Start command', enabled: true, order: 4, role: 'auto', body: START_BODY },
+    ],
+  };
+}
 
-export const DEFAULT_SETTINGS = Object.freeze({
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+export const DEFAULT_SETTINGS = deepFreeze({
   enabled: false,
   plannerPrompt: '',
-  planner: DEFAULT_PLANNER,
-  response: DEFAULT_STAGE,
+  planner: {
+    ...DEFAULT_STAGE,
+    activeArrangement: 'Default',
+    arrangements: [defaultArrangement()],
+  },
+  response: { ...DEFAULT_STAGE },
 });
 
 const stringValue = (value) => typeof value === 'string' ? value : '';
+const objectValue = (value) => value && typeof value === 'object' && !Array.isArray(value)
+  ? value
+  : {};
 
-function normalizeStage(value, planner = false) {
-  const source = value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
+function normalizeDepth(value) {
+  const depth = Number(value);
+  return Number.isFinite(depth)
+    ? Math.min(100, Math.max(0, Math.trunc(depth)))
+    : 5;
+}
 
-  const normalized = {
+function normalizeHistoryOptions(source) {
+  const historyMode = source.historyMode === 'depth' ? 'depth' : 'full';
+  return {
+    historyMode,
+    historyDepth: normalizeDepth(source.historyDepth),
+    includeSummaryception: historyMode === 'full'
+      && (typeof source.includeSummaryception === 'boolean'
+        ? source.includeSummaryception
+        : true),
+  };
+}
+
+function normalizeStage(value) {
+  const source = objectValue(value);
+  return {
     source: CONNECTION_SOURCE.has(source.source) ? source.source : 'profile',
     profileId: stringValue(source.profileId),
     customUrl: stringValue(source.customUrl).trim(),
     secretId: stringValue(source.secretId),
     model: stringValue(source.model).trim(),
   };
-  if (!planner) return normalized;
+}
 
-  normalized.contextMode = source.contextMode === 'preset' ? 'preset' : 'minimal';
-  normalized.historyMode = source.historyMode === 'depth' ? 'depth' : 'full';
-  const depth = Number(source.historyDepth);
-  normalized.historyDepth = Number.isFinite(depth)
-    ? Math.min(100, Math.max(0, Math.trunc(depth)))
-    : DEFAULT_PLANNER.historyDepth;
-  normalized.includeSummaryception = normalized.historyMode === 'full'
-    && (typeof source.includeSummaryception === 'boolean'
-      ? source.includeSummaryception
-      : DEFAULT_PLANNER.includeSummaryception);
-  return normalized;
+function normalizeBlock(value) {
+  const source = objectValue(value);
+  const name = stringValue(source.name).trim();
+  const validCommon = name
+    && typeof source.enabled === 'boolean'
+    && Number.isInteger(source.order)
+    && source.order >= 0
+    && BLOCK_ROLES.has(source.role);
+  if (!validCommon) return null;
+
+  const common = {
+    kind: source.kind,
+    name,
+    enabled: source.enabled,
+    order: source.order,
+    role: source.role,
+  };
+
+  if (source.kind === 'text') {
+    if (typeof source.body !== 'string') return null;
+    return { ...common, body: source.body };
+  }
+
+  if (source.kind !== 'slot' || !SLOT_NAMES.has(source.slot)) return null;
+  if (source.slot === 'template' && !source.enabled) return null;
+  const block = { ...common, slot: source.slot };
+  if (source.slot === 'history') Object.assign(block, normalizeHistoryOptions(source));
+  return block;
+}
+
+function normalizeArrangement(value) {
+  const source = objectValue(value);
+  const name = stringValue(source.name).trim();
+  if (!name || !Array.isArray(source.blocks)) return null;
+
+  const blocks = source.blocks.map(normalizeBlock);
+  if (blocks.some((block) => block === null)) return null;
+  const slotNames = blocks
+    .filter((block) => block.kind === 'slot')
+    .map((block) => block.slot);
+  if (slotNames.filter((slot) => slot === 'template').length !== 1) return null;
+  if (new Set(slotNames).size !== slotNames.length) return null;
+
+  blocks.sort((left, right) => left.order - right.order);
+  blocks.forEach((block, order) => { block.order = order; });
+  return { name, blocks };
+}
+
+function migratedArrangements(source) {
+  const history = normalizeHistoryOptions(source);
+  return [defaultArrangement({
+    presetEnabled: source.contextMode === 'preset',
+    ...history,
+  })];
+}
+
+function normalizeArrangements(source) {
+  const hasStoredArrangements = Object.hasOwn(source, 'arrangements');
+  if (!hasStoredArrangements) return migratedArrangements(source);
+  if (!Array.isArray(source.arrangements) || source.arrangements.length === 0) {
+    return [defaultArrangement()];
+  }
+
+  const arrangements = source.arrangements.map(normalizeArrangement);
+  const names = arrangements.filter(Boolean).map(({ name }) => name);
+  if (arrangements.some((arrangement) => arrangement === null)
+    || new Set(names).size !== names.length) {
+    return [defaultArrangement()];
+  }
+  if (!names.includes('Default')) arrangements.push(defaultArrangement());
+  return arrangements;
+}
+
+function normalizePlanner(value) {
+  const source = objectValue(value);
+  const arrangements = normalizeArrangements(source);
+  const requestedActive = stringValue(source.activeArrangement);
+  return {
+    ...normalizeStage(source),
+    activeArrangement: arrangements.some(({ name }) => name === requestedActive)
+      ? requestedActive
+      : 'Default',
+    arrangements,
+  };
+}
+
+export function getActiveArrangement(planner) {
+  const source = objectValue(planner);
+  return source.arrangements?.find(({ name }) => name === source.activeArrangement)
+    ?? source.arrangements?.find(({ name }) => name === 'Default');
+}
+
+export function getArrangementSlot(arrangement, slot) {
+  return arrangement?.blocks?.find((block) => block.kind === 'slot' && block.slot === slot);
+}
+
+export function getActivePlannerContext(planner) {
+  const arrangement = getActiveArrangement(planner);
+  const preset = getArrangementSlot(arrangement, 'preset');
+  const history = getArrangementSlot(arrangement, 'history');
+  return {
+    contextMode: preset?.enabled ? 'preset' : 'minimal',
+    historyMode: history?.historyMode ?? 'full',
+    historyDepth: history?.historyDepth ?? 5,
+    includeSummaryception: history?.includeSummaryception ?? false,
+  };
 }
 
 export function normalizeSettings(value) {
-  const source = value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
-
+  const source = objectValue(value);
   return {
     enabled: typeof source.enabled === 'boolean' ? source.enabled : false,
     plannerPrompt: stringValue(source.plannerPrompt),
-    planner: normalizeStage(source.planner, true),
+    planner: normalizePlanner(source.planner),
     response: normalizeStage(source.response),
   };
 }

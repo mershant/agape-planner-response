@@ -1,4 +1,9 @@
-import { normalizeSettings } from './settings.mjs';
+import {
+  getActiveArrangement,
+  getActivePlannerContext,
+  getArrangementSlot,
+  normalizeSettings,
+} from './settings.mjs';
 
 const ROOT_ID = 'agape-planner-response-settings';
 
@@ -56,6 +61,10 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
   let settings = normalizeSettings(initialSettings);
   const byId = (id) => root.querySelector(`#${id}`);
   const status = byId('agape-planner-response-status');
+  const activePlannerSlot = (slot) => getArrangementSlot(
+    getActiveArrangement(settings.planner),
+    slot,
+  );
 
   function persist() {
     settings = normalizeSettings(settings);
@@ -75,13 +84,14 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     const keyState = byId(`${prefix}-key-state`);
     keyState.textContent = stage.secretId ? 'API key saved in SillyTavern' : 'No saved API key (keyless is allowed)';
     if (stageName === 'planner') {
-      byId('agape-planner-context-mode').value = stage.contextMode;
-      byId('agape-planner-history-mode').value = stage.historyMode;
-      byId('agape-planner-history-depth').value = String(stage.historyDepth);
-      root.querySelector('[data-stage-panel="planner-history-depth"]').hidden = stage.historyMode !== 'depth';
+      const plannerContext = getActivePlannerContext(stage);
+      byId('agape-planner-context-mode').value = plannerContext.contextMode;
+      byId('agape-planner-history-mode').value = plannerContext.historyMode;
+      byId('agape-planner-history-depth').value = String(plannerContext.historyDepth);
+      root.querySelector('[data-stage-panel="planner-history-depth"]').hidden = plannerContext.historyMode !== 'depth';
       const summaryception = byId('agape-planner-summaryception');
-      summaryception.checked = stage.includeSummaryception;
-      summaryception.disabled = stage.historyMode !== 'full';
+      summaryception.checked = plannerContext.includeSummaryception;
+      summaryception.disabled = plannerContext.historyMode !== 'full';
     }
   }
 
@@ -151,26 +161,32 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
   }
 
   byId('agape-planner-history-mode').addEventListener('change', (event) => {
-    settings.planner.historyMode = event.currentTarget.value;
-    if (settings.planner.historyMode === 'depth') {
-      settings.planner.includeSummaryception = false;
+    const history = activePlannerSlot('history');
+    if (history) {
+      history.historyMode = event.currentTarget.value;
+      if (history.historyMode === 'depth') history.includeSummaryception = false;
     }
     persist();
     renderStage('planner');
   });
   byId('agape-planner-context-mode').addEventListener('change', (event) => {
-    settings.planner.contextMode = event.currentTarget.value;
+    const preset = activePlannerSlot('preset');
+    if (preset) preset.enabled = event.currentTarget.value === 'preset';
     persist();
     renderStage('planner');
   });
   byId('agape-planner-history-depth').addEventListener('input', (event) => {
-    settings.planner.historyDepth = event.currentTarget.valueAsNumber;
+    const history = activePlannerSlot('history');
+    if (history) history.historyDepth = event.currentTarget.valueAsNumber;
     persist();
     renderStage('planner');
   });
   byId('agape-planner-summaryception').addEventListener('change', (event) => {
-    settings.planner.includeSummaryception = settings.planner.historyMode === 'full'
-      && event.currentTarget.checked;
+    const history = activePlannerSlot('history');
+    if (history) {
+      history.includeSummaryception = history.historyMode === 'full'
+        && event.currentTarget.checked;
+    }
     persist();
     renderStage('planner');
   });
