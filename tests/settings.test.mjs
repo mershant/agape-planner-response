@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
 import {
   DEFAULT_SETTINGS,
@@ -44,6 +45,31 @@ test('settings contain the safe Default arrangement schema', () => {
   assert.equal(DEFAULT_SETTINGS.response.source, 'profile');
   assert.equal(DEFAULT_SETTINGS.response.minWords, 100);
   assert.equal(DEFAULT_SETTINGS.response.retryCount, 5);
+  assert.equal(DEFAULT_SETTINGS.planner.reasoningLevel, 'unset');
+  assert.equal(DEFAULT_SETTINGS.response.reasoningLevel, 'unset');
+});
+
+test('each stage persists its own reasoning level and unknown values return to Unset', () => {
+  const settings = normalizeSettings({
+    planner: { reasoningLevel: 'high' },
+    response: { reasoningLevel: 'off' },
+  });
+  assert.equal(settings.planner.reasoningLevel, 'high');
+  assert.equal(settings.response.reasoningLevel, 'off');
+
+  const independent = normalizeSettings({
+    planner: { reasoningLevel: 'low' },
+    response: { reasoningLevel: 'max' },
+  });
+  assert.equal(independent.planner.reasoningLevel, 'low');
+  assert.equal(independent.response.reasoningLevel, 'max');
+
+  const fallback = normalizeSettings({
+    planner: { reasoningLevel: 'mystery' },
+    response: { reasoningLevel: '' },
+  });
+  assert.equal(fallback.planner.reasoningLevel, 'unset');
+  assert.equal(fallback.response.reasoningLevel, 'unset');
 });
 
 test('Response min-words and retry-count are normalized without inventing extra fields', () => {
@@ -178,6 +204,25 @@ test('settings preserve literal Planner text and never persist raw API keys', ()
   assert.equal(settings.plannerPrompt, '  {{getvar::scene}}\n{{roll::1d20}}  ');
   assert.equal(Object.hasOwn(settings.planner, 'apiKey'), false);
   assert.equal(Object.hasOwn(settings.response, 'apiKey'), false);
+});
+
+test('each stage shows the reasoning dropdown directly below its model override', () => {
+  const html = readFileSync(new URL('../settings.html', import.meta.url), 'utf8');
+  const plannerModel = html.indexOf('id="agape-planner-model"');
+  const plannerReasoning = html.indexOf('id="agape-planner-reasoning"');
+  const plannerSectionEnd = html.indexOf('</section>', plannerModel);
+  const responseModel = html.indexOf('id="agape-response-model"');
+  const responseReasoning = html.indexOf('id="agape-response-reasoning"');
+  const responseMinWords = html.indexOf('id="agape-response-min-words"');
+
+  assert.ok(plannerModel !== -1 && plannerReasoning !== -1);
+  assert.ok(plannerModel < plannerReasoning && plannerReasoning < plannerSectionEnd);
+  assert.ok(responseModel !== -1 && responseReasoning !== -1);
+  assert.ok(responseModel < responseReasoning && responseReasoning < responseMinWords);
+  assert.match(html, /<option value="unset">Unset<\/option>/);
+  assert.match(html, /<option value="off">Off<\/option>/);
+  assert.match(html, /<option value="xhigh">xHigh<\/option>/);
+  assert.match(html, /<option value="max">Max<\/option>/);
 });
 
 test('unknown connection source values return to profile mode', () => {

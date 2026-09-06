@@ -1,4 +1,5 @@
 import { requireVisibleText } from './contracts.mjs';
+import { REASONING_LEVELS } from './settings.mjs';
 
 const TRANSPORT_ERROR_PREFIX = 'Error ';
 const TRANSPORT_ERROR_JSON_PREFIX = ': {"error":';
@@ -216,6 +217,33 @@ function activeProfileId(context) {
   return String(context?.extensionSettings?.connectionManager?.selectedProfile ?? '');
 }
 
+function isGeminiModel(model) {
+  return /gemini/iu.test(String(model));
+}
+
+function normalizeReasoningLevel(value) {
+  return REASONING_LEVELS.includes(value) ? value : 'unset';
+}
+
+function reasoningIncludeBody(model, level) {
+  if (isGeminiModel(model)) {
+    if (level === 'off') {
+      return '{"thinking":{"type":"disabled"},"thinking_config":{"thinking_budget":0}}';
+    }
+    return JSON.stringify({
+      thinking: { type: 'enabled' },
+      thinking_config: { thinking_level: level },
+    });
+  }
+  if (level === 'off') {
+    return JSON.stringify({
+      thinking: { type: 'disabled' },
+      reasoning_effort: 'none',
+    });
+  }
+  return JSON.stringify({ reasoning_effort: level });
+}
+
 export function scyllaStageOverride(model, url, { planner = false } = {}) {
   let hostname = '';
   try {
@@ -224,7 +252,7 @@ export function scyllaStageOverride(model, url, { planner = false } = {}) {
     return undefined;
   }
   if (hostname !== 'scylla.love' && !hostname.endsWith('.scylla.love')) return undefined;
-  if (/gemini/iu.test(String(model))) {
+  if (isGeminiModel(model)) {
     return planner
       ? {
         custom_include_body: '{"thinking":{"type":"disabled"},"thinking_config":{"thinking_budget":0}}',
@@ -241,6 +269,47 @@ export function scyllaStageOverride(model, url, { planner = false } = {}) {
     };
   }
   return undefined;
+}
+
+export function stageRequestOverride(model, url, { planner = false, reasoningLevel = 'unset' } = {}) {
+  const compatibility = scyllaStageOverride(model, url, { planner });
+  const level = normalizeReasoningLevel(reasoningLevel);
+  if (level === 'unset') return compatibility;
+  return {
+    ...(compatibility ?? {}),
+    custom_include_body: reasoningIncludeBody(model, level),
+    custom_exclude_body: mergeExcludedFields(
+      compatibility?.custom_exclude_body,
+      isGeminiModel(model) ? ['reasoning_effort'] : ['thinking', 'thinking_config'],
+    ),
+  };
+}
+
+export function stageTransportOverride(context, stage, planner = false) {
+  const selectedProfileId = stage.profileId
+    || context.extensionSettings?.connectionManager?.selectedProfile;
+  const profile = context.extensionSettings?.connectionManager?.profiles?.find(
+    (candidate) => candidate?.id === selectedProfileId,
+  );
+  const model = stage.model || profile?.model || context.getChatCompletionModel?.();
+  const url = stage.source === 'custom'
+    ? stage.customUrl
+    : profile?.['api-url'] || context.chatCompletionSettings?.custom_url;
+  const override = stageRequestOverride(model, url, {
+    planner,
+    reasoningLevel: stage.reasoningLevel,
+  });
+  if (!override?.custom_exclude_body) return override;
+  const presetName = profile?.preset
+    || context.getPresetManager?.('openai')?.getSelectedPresetName?.();
+  const preset = context.getPresetManager?.('openai')
+    ?.getCompletionPresetByName?.(presetName);
+  const existing = preset?.custom_exclude_body
+    ?? context.chatCompletionSettings?.custom_exclude_body;
+  return {
+    ...override,
+    custom_exclude_body: mergeExcludedFields(existing, JSON.parse(override.custom_exclude_body)),
+  };
 }
 
 export function mergeExcludedFields(value, addedFields) {

@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/grok-4.6, at: 2026-09-06T07:30:00Z }
+generated: { by: opencode/grok-4.6, at: 2026-09-06T18:00:00Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -69,7 +69,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 94 deterministic tests pass. The former structural
+- **Automated tests:** 110 deterministic tests pass. The former structural
   Planning validator and its tests were removed because the extension cannot
   know whether an arbitrary user-authored template is complete; only blank
   visible Planner output is rejected.
@@ -135,6 +135,13 @@ not the new product foundation.
   short reply. A later swipe with retries off made one Planner request and one
   Response request. Planning bytes on the retry path were identical across
   both Response attempts.
+- **Per-stage reasoning level:** written and deterministically tested. Unset
+  keeps today's request bytes, Off sends the explicit disable shape, and the
+  other levels map to Gemini thinking-config or effort-style dialects without
+  mutating presets. Live isolated SillyTavern Dev proof: one Send with Planner
+  Low completed with `thinking_level: low` in the Planner body, and one Send
+  with Response High completed with `thinking_level: high` in the Response
+  body. Unset Planner on the second Send still sent today's Gemini disable.
 - **Acceptance:** not granted.
 - **Release:** published as a public SillyTavern extension at
   `https://github.com/mershant/agape-planner-response` after David directed
@@ -164,11 +171,17 @@ and two model connections:
 - Response connection: current or selected SillyTavern profile, or direct
   custom Chat Completion API;
 - Response retry: minimum word count, default 100, and retry count, default 5;
+- per-stage reasoning level: Unset, Off, Low, Medium, High, xHigh, or Max;
 - literal custom Planner template.
 
 Each connection has one optional model override. When it is blank, a selected
 profile's own model is used. Direct custom API keys remain in SillyTavern's key
 store rather than extension settings.
+
+Each connection also has one reasoning level, saved independently, with Unset as
+the default. Unset leaves today's request unchanged. Off disables provider
+thinking. The other levels set how hard that stage's model thinks, on the
+outgoing request only. Choosing a level never edits the user's preset.
 
 Each normal, swipe, or regenerate assistant candidate starts one operation.
 Continue and quiet generations remain native and are not intercepted. A

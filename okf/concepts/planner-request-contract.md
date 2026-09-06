@@ -4,7 +4,7 @@ title: Planner Request Contract
 description: Defines the exact contextual cross-provider request sent to the selected Planner model and the user-editable arrangement that assembles it.
 tags: [planner, request, macros, arrangement]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-09-06T04:28:32Z }
+generated: { by: opencode/grok-4.6, at: 2026-09-06T18:00:00Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -212,9 +212,14 @@ for the current operation and are not written by this extension.
 - Do not include the selected profile's preset or instruct template.
 - Stream exact normal content into the assistant message's native Planning
   disclosure before Response generation starts.
-- For Scylla Gemini Planner requests, explicitly disable provider thinking in
-  both accepted request dialects. This reduces hidden pre-output work but does
-  not convert Scylla's buffered Gemini content into a true semantic stream.
+- Each Planner connection has a reasoning level: Unset, Off, Low, Medium, High,
+  xHigh, or Max. Unset is the default and keeps today's request bytes, including
+  the rule that Scylla Gemini Planner requests explicitly disable provider
+  thinking in both accepted request dialects. Off sends that explicit disable
+  shape. A chosen level overrides Unset and Off for the Planner request only and
+  maps to the dialect the target accepts. Choosing a level never edits the
+  user's preset. Unset/Off still do not convert Scylla's buffered Gemini content
+  into a true semantic stream.
 - A user Stop aborts the request.
 
 # Output boundary

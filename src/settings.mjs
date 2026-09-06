@@ -1,6 +1,8 @@
 const CONNECTION_SOURCE = new Set(['profile', 'custom']);
 export const BLOCK_ROLES = Object.freeze(['system', 'user', 'assistant', 'auto']);
+export const REASONING_LEVELS = Object.freeze(['unset', 'off', 'low', 'medium', 'high', 'xhigh', 'max']);
 const BLOCK_ROLE_SET = new Set(BLOCK_ROLES);
+const REASONING_LEVEL_SET = new Set(REASONING_LEVELS);
 const SLOT_NAMES = new Set(['preset', 'history', 'template']);
 
 const TASK_BODY = `<task>
@@ -15,6 +17,7 @@ const DEFAULT_STAGE = {
   customUrl: '',
   secretId: '',
   model: '',
+  reasoningLevel: 'unset',
 };
 
 function defaultArrangement({
@@ -103,6 +106,7 @@ function normalizeStage(value) {
     customUrl: stringValue(source.customUrl).trim(),
     secretId: stringValue(source.secretId),
     model: stringValue(source.model).trim(),
+    reasoningLevel: REASONING_LEVEL_SET.has(source.reasoningLevel) ? source.reasoningLevel : 'unset',
   };
 }
 

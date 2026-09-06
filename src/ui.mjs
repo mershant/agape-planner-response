@@ -87,6 +87,7 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     const prefix = `agape-${stageName}`;
     byId(`${prefix}-source`).value = stage.source;
     byId(`${prefix}-model`).value = stage.model;
+    byId(`${prefix}-reasoning`).value = stage.reasoningLevel;
     if (stageName === 'response') {
       byId('agape-response-min-words').value = String(stage.minWords);
       byId('agape-response-retry-count').value = String(stage.retryCount);
@@ -259,6 +260,10 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     });
     byId(`${prefix}-model`).addEventListener('input', (event) => {
       settings[stageName].model = event.currentTarget.value;
+      persist();
+    });
+    byId(`${prefix}-reasoning`).addEventListener('change', (event) => {
+      settings[stageName].reasoningLevel = event.currentTarget.value;
       persist();
     });
     byId(`${prefix}-custom-url`).addEventListener('input', (event) => {

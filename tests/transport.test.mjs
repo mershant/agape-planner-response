@@ -7,6 +7,8 @@ import {
   requestStage,
   requestStageDetailed,
   scyllaStageOverride,
+  stageRequestOverride,
+  stageTransportOverride,
 } from '../src/transport.mjs';
 
 function streamFrames(...frames) {
@@ -371,6 +373,153 @@ test('Scylla stage override isolates model-specific custom body settings', () =>
     },
   );
   assert.equal(scyllaStageOverride('gpt-5.6-sol', 'https://example.com/v1'), undefined);
+});
+
+const SCYLLA_URL = 'https://proxy.scylla.love/v1';
+const OTHER_URL = 'https://example.com/v1';
+const GEMINI_OFF_BODY = '{"thinking":{"type":"disabled"},"thinking_config":{"thinking_budget":0}}';
+
+function appliedBody(base, override) {
+  const body = { ...base };
+  const include = String(override?.custom_include_body ?? '').trim();
+  if (include) Object.assign(body, JSON.parse(include));
+  const exclude = String(override?.custom_exclude_body ?? '').trim();
+  if (exclude) {
+    for (const key of JSON.parse(exclude)) delete body[key];
+  }
+  return body;
+}
+
+test('Unset reasoning keeps today\'s exact Planner and Response override bytes', () => {
+  assert.deepEqual(
+    stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true, reasoningLevel: 'unset' }),
+    scyllaStageOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true }),
+  );
+  assert.deepEqual(
+    stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true }),
+    scyllaStageOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true }),
+  );
+  assert.equal(
+    stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { reasoningLevel: 'unset' }),
+    scyllaStageOverride('gemini-3.7-flash', SCYLLA_URL),
+  );
+  assert.deepEqual(
+    stageRequestOverride('gpt-5.6-sol', SCYLLA_URL, { reasoningLevel: 'unset' }),
+    scyllaStageOverride('gpt-5.6-sol', SCYLLA_URL),
+  );
+  assert.equal(
+    stageRequestOverride('gemini-3.7-flash', OTHER_URL, { planner: true, reasoningLevel: 'unset' }),
+    scyllaStageOverride('gemini-3.7-flash', OTHER_URL, { planner: true }),
+  );
+});
+
+test('Off produces the explicit disable shape for Gemini-style and effort-style targets', () => {
+  assert.equal(
+    stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true, reasoningLevel: 'off' }).custom_include_body,
+    GEMINI_OFF_BODY,
+  );
+  assert.deepEqual(
+    JSON.parse(stageRequestOverride('gpt-5.6-sol', SCYLLA_URL, { reasoningLevel: 'off' }).custom_include_body),
+    { thinking: { type: 'disabled' }, reasoning_effort: 'none' },
+  );
+});
+
+test('each reasoning level produces the Gemini-style and effort-style dialects', () => {
+  const geminiLevels = {
+    low: { thinking: { type: 'enabled' }, thinking_config: { thinking_level: 'low' } },
+    medium: { thinking: { type: 'enabled' }, thinking_config: { thinking_level: 'medium' } },
+    high: { thinking: { type: 'enabled' }, thinking_config: { thinking_level: 'high' } },
+    xhigh: { thinking: { type: 'enabled' }, thinking_config: { thinking_level: 'xhigh' } },
+    max: { thinking: { type: 'enabled' }, thinking_config: { thinking_level: 'max' } },
+  };
+  const effortLevels = {
+    low: { reasoning_effort: 'low' },
+    medium: { reasoning_effort: 'medium' },
+    high: { reasoning_effort: 'high' },
+    xhigh: { reasoning_effort: 'xhigh' },
+    max: { reasoning_effort: 'max' },
+  };
+
+  for (const [level, body] of Object.entries(geminiLevels)) {
+    assert.deepEqual(
+      JSON.parse(stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true, reasoningLevel: level }).custom_include_body),
+      body,
+    );
+  }
+  for (const [level, body] of Object.entries(effortLevels)) {
+    assert.deepEqual(
+      JSON.parse(stageRequestOverride('gpt-5.6-sol', SCYLLA_URL, { reasoningLevel: level }).custom_include_body),
+      body,
+    );
+  }
+});
+
+test('incompatible reasoning fields are dropped without changing other request content', () => {
+  const presetBody = {
+    temperature: 0.8,
+    top_p: 0.9,
+    thinking: { type: 'enabled' },
+    thinking_config: { thinking_budget: 2048 },
+    reasoning_effort: 'medium',
+    seed: 7,
+  };
+
+  const gemini = appliedBody(
+    presetBody,
+    stageRequestOverride('gemini-3.7-flash', SCYLLA_URL, { planner: true, reasoningLevel: 'high' }),
+  );
+  assert.equal(gemini.temperature, 0.8);
+  assert.equal(gemini.top_p, 0.9);
+  assert.equal(gemini.seed, 7);
+  assert.equal(gemini.reasoning_effort, undefined);
+  assert.deepEqual(gemini.thinking, { type: 'enabled' });
+  assert.deepEqual(gemini.thinking_config, { thinking_level: 'high' });
+
+  const gpt = appliedBody(
+    presetBody,
+    stageRequestOverride('gpt-5.6-sol', SCYLLA_URL, { reasoningLevel: 'high' }),
+  );
+  assert.equal(gpt.reasoning_effort, 'high');
+  assert.equal(gpt.thinking, undefined);
+  assert.equal(gpt.thinking_config, undefined);
+  assert.equal(gpt.seed, 7);
+  assert.equal(gpt.temperature, undefined);
+  assert.equal(gpt.top_p, undefined);
+});
+
+test('choosing a reasoning level never mutates presets or stored settings', () => {
+  const preset = Object.freeze({
+    custom_include_body: '{"thinking":{"type":"enabled"}}',
+    custom_exclude_body: '["seed"]',
+    temperature: 0.7,
+  });
+  const stage = Object.freeze({
+    source: 'profile',
+    profileId: 'planner',
+    model: 'gpt-5.6-sol',
+    reasoningLevel: 'high',
+  });
+  const context = {
+    extensionSettings: {
+      connectionManager: {
+        selectedProfile: 'planner',
+        profiles: [{ id: 'planner', model: 'gpt-5.6-sol', 'api-url': SCYLLA_URL, preset: 'Active RP' }],
+      },
+    },
+    getPresetManager: () => ({
+      getSelectedPresetName: () => 'Active RP',
+      getCompletionPresetByName: () => preset,
+    }),
+  };
+
+  const override = stageTransportOverride(context, stage);
+  assert.equal(preset.custom_include_body, '{"thinking":{"type":"enabled"}}');
+  assert.equal(preset.custom_exclude_body, '["seed"]');
+  assert.equal(preset.temperature, 0.7);
+  assert.deepEqual(JSON.parse(override.custom_include_body), { reasoning_effort: 'high' });
+  assert.match(override.custom_exclude_body, /"thinking"/u);
+  assert.match(override.custom_exclude_body, /"seed"/u);
+  assert.equal(stage.reasoningLevel, 'high');
 });
 
 test('model compatibility exclusions preserve existing preset exclusions', () => {
