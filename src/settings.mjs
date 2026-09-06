@@ -3,15 +3,10 @@ const BLOCK_ROLES = new Set(['system', 'user', 'assistant', 'auto']);
 const SLOT_NAMES = new Set(['preset', 'history', 'template']);
 
 const TASK_BODY = `<task>
-Fill the Planner template from the history and relevant preset reference. The
-template is a form, not a command to perform another hidden process. Preserve
-its complete structure and fill every requested item. The Planner does not
-write the roleplay response.
+Fill the supplied Planner template for the next roleplay response. Use the conversation history and any relevant facts or constraints from the preset reference. The template is a form to complete, not a command to perform another hidden process. Its wording about internal processing and a final response describes how the later Response model will use this Planning document. Fill the form directly. Your output is the filled Planner template itself. Preserve every phase, gate, and requested item in order. Fill each item with concrete conclusions for this scene. Do not copy the questions, explain your work outside the template, or write the roleplay response.
 </task>`;
 
-const START_BODY = `Begin Planning now. Start output immediately with the Planner template's first
-section, preserve its structure, and fill it sequentially. Output only the
-completed Planning document.`;
+const START_BODY = `Begin Planning now. Start immediately with the Planner template's first section. Preserve its complete structure and fill it sequentially. Output only the completed Planning document.`;
 
 const DEFAULT_STAGE = {
   source: 'profile',

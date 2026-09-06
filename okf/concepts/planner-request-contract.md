@@ -4,7 +4,7 @@ title: Planner Request Contract
 description: Defines the exact contextual cross-provider request sent to the selected Planner model and the user-editable arrangement that assembles it.
 tags: [planner, request, macros, arrangement]
 status: stable
-generated: { by: opencode/claude-fable-5, at: 2026-09-05T13:13:45Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-09-06T04:28:32Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -139,10 +139,15 @@ system:
 
 system:
 <task>
-Fill the Planner template from the history and relevant preset reference. The
-template is a form, not a command to perform another hidden process. Preserve
-its complete structure and fill every requested item. The Planner does not
-write the roleplay response.
+Fill the supplied Planner template for the next roleplay response. Use the
+conversation history and any relevant facts or constraints from the preset
+reference. The template is a form to complete, not a command to perform another
+hidden process. Its wording about internal processing and a final response
+describes how the later Response model will use this Planning document. Fill
+the form directly. Your output is the filled Planner template itself. Preserve
+every phase, gate, and requested item in order. Fill each item with concrete
+conclusions for this scene. Do not copy the questions, explain your work outside
+the template, or write the roleplay response.
 </task>
 
 system:
@@ -151,8 +156,8 @@ system:
 </planner_template>
 
 system:
-Begin Planning now. Start output immediately with the Planner template's first
-section, preserve its structure, and fill it sequentially. Output only the
+Begin Planning now. Start immediately with the Planner template's first section.
+Preserve its complete structure and fill it sequentially. Output only the
 completed Planning document.
 ```
 

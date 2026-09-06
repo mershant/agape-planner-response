@@ -70,6 +70,8 @@ test('one Send visibly completes Planning before Response in the same message', 
   ]);
   assert.deepEqual(eventNames, [
     'expand',
+    'expand',
+    'expand',
     'planning',
     'planner-request',
     'planning',

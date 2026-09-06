@@ -7,6 +7,7 @@ import {
   collectPlannerHistory,
   extractSummaryceptionText,
 } from '../src/planner-context.mjs';
+import { DEFAULT_SETTINGS } from '../src/settings.mjs';
 
 const chat = [
   { is_user: false, name: 'Narrator', mes: 'Opening scene.' },
@@ -27,7 +28,10 @@ test('full Planner history preserves every visible conversation message in order
 });
 
 test('native Planner packet separates task, preset, history, template, and start by role', () => {
+  const arrangement = structuredClone(DEFAULT_SETTINGS.planner.arrangements[0]);
+  arrangement.blocks.find((block) => block.slot === 'preset').enabled = true;
   const messages = buildPlannerContextMessages({
+    arrangement,
     presetPrompts: [
       { name: 'Rules', role: 'system', content: '<rules>Apply.</rules>' },
       { name: 'Example', role: 'assistant', content: 'Example response.' },
@@ -59,6 +63,63 @@ test('native Planner packet separates task, preset, history, template, and start
   assert.equal(messages.filter((message) => message.content.startsWith('<preset>')).length, 1);
   assert.equal(messages.filter((message) => message.content === '</preset>').length, 1);
   assert.equal(messages.some((message) => message.content.includes('Apply.</rules>\n</prompt>\n<prompt')), false);
+});
+
+test('Default arrangement produces the proven Planner packet byte for byte', () => {
+  const arrangement = DEFAULT_SETTINGS.planner.arrangements[0];
+  const messages = buildPlannerContextMessages({
+    arrangement,
+    history: [{ role: 'user', name: 'Eloise', content: 'Current turn.' }],
+    summaryception: 'Earlier events.',
+    plannerTemplate: '# Planning\nGATE 1. Scene:',
+    substituteParams: (text) => text,
+  });
+
+  assert.deepEqual(messages, [
+    { role: 'system', content: '<history>' },
+    { role: 'system', content: '<summaryception>\nEarlier events.\n</summaryception>' },
+    { role: 'user', content: '<message name="Eloise">\nCurrent turn.\n</message>' },
+    { role: 'system', content: '</history>' },
+    {
+      role: 'system',
+      content: '<task>\nFill the supplied Planner template for the next roleplay response. Use the conversation history and any relevant facts or constraints from the preset reference. The template is a form to complete, not a command to perform another hidden process. Its wording about internal processing and a final response describes how the later Response model will use this Planning document. Fill the form directly. Your output is the filled Planner template itself. Preserve every phase, gate, and requested item in order. Fill each item with concrete conclusions for this scene. Do not copy the questions, explain your work outside the template, or write the roleplay response.\n</task>',
+    },
+    { role: 'system', content: '<planner_template>\n# Planning\nGATE 1. Scene:\n</planner_template>' },
+    {
+      role: 'system',
+      content: 'Begin Planning now. Start immediately with the Planner template\'s first section. Preserve its complete structure and fill it sequentially. Output only the completed Planning document.',
+    },
+  ]);
+});
+
+test('arrangement order, disabled blocks, added text, and fixed roles control assembly', () => {
+  const arrangement = {
+    name: 'Custom',
+    blocks: [
+      { kind: 'text', name: 'Disabled', enabled: false, order: 0, role: 'system', body: 'omit me' },
+      { kind: 'slot', slot: 'template', name: 'Template', enabled: false, order: 1, role: 'assistant' },
+      { kind: 'text', name: 'Reminder', enabled: true, order: 2, role: 'user', body: 'State: {{getvar::state}}' },
+      { kind: 'slot', slot: 'history', name: 'History', enabled: true, order: 3, role: 'assistant' },
+      { kind: 'slot', slot: 'preset', name: 'Preset', enabled: false, order: 4, role: 'system' },
+    ],
+  };
+
+  const messages = buildPlannerContextMessages({
+    arrangement,
+    history: [{ role: 'user', name: 'Eloise', content: 'Current turn.' }],
+    summaryception: 'Earlier events.',
+    plannerTemplate: 'Template',
+    substituteParams: (text) => text.replace('{{getvar::state}}', 'active'),
+  });
+
+  assert.deepEqual(messages, [
+    { role: 'assistant', content: '<planner_template>\nTemplate\n</planner_template>' },
+    { role: 'user', content: 'State: active' },
+    { role: 'assistant', content: '<history>' },
+    { role: 'system', content: '<summaryception>\nEarlier events.\n</summaryception>' },
+    { role: 'user', content: '<message name="Eloise">\nCurrent turn.\n</message>' },
+    { role: 'assistant', content: '</history>' },
+  ]);
 });
 
 test('greeting Planning uses only the start command as Gemini user contents', () => {

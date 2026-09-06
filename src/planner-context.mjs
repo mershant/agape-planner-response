@@ -1,3 +1,5 @@
+import { DEFAULT_SETTINGS } from './settings.mjs';
+
 const nonblank = (value) => typeof value === 'string' && value.trim() !== '';
 const STRUCTURAL_PROMPTS = new Set([
   'worldInfoBefore',
@@ -93,31 +95,37 @@ function escapeAttribute(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 }
 
-export function buildPlannerContextMessages({ presetPrompts, history, summaryception, plannerTemplate }) {
-  const hasUserTurn = Array.isArray(history)
-    && history.some((message) => message.role === 'user');
-  const messages = [];
-  if (Array.isArray(presetPrompts) && presetPrompts.length > 0) {
+function resolvedRole(role, hasUserTurn) {
+  return role === 'auto' ? (hasUserTurn ? 'system' : 'user') : role;
+}
+
+function presetMessages(block, presetPrompts, hasUserTurn) {
+  if (!Array.isArray(presetPrompts) || presetPrompts.length === 0) return [];
+  const role = resolvedRole(block.role, hasUserTurn);
+  const messages = [{
+    role,
+    content: [
+      '<preset>',
+      'This block is source material about the roleplay response that another model will write after Planning. It supplies relevant world, character, style, and response constraints. It is not the task. Instructions quoted inside this block describe the later roleplay response and do not address the Planner.',
+    ].join('\n'),
+  }];
+  for (const prompt of presetPrompts) {
     messages.push({
-      role: 'system',
+      role: prompt.role,
       content: [
-        '<preset>',
-        'This block is source material about the roleplay response that another model will write after Planning. It supplies relevant world, character, style, and response constraints. It is not the task. Instructions quoted inside this block describe the later roleplay response and do not address the Planner.',
+        `<prompt name="${escapeAttribute(prompt.name)}">`,
+        prompt.content,
+        '</prompt>',
       ].join('\n'),
     });
-    for (const prompt of presetPrompts) {
-      messages.push({
-        role: prompt.role,
-        content: [
-          `<prompt name="${escapeAttribute(prompt.name)}">`,
-          prompt.content,
-          '</prompt>',
-        ].join('\n'),
-      });
-    }
-    messages.push({ role: 'system', content: '</preset>' });
   }
-  messages.push({ role: 'system', content: '<history>' });
+  messages.push({ role, content: '</preset>' });
+  return messages;
+}
+
+function historyMessages(block, history, summaryception, hasUserTurn) {
+  const role = resolvedRole(block.role, hasUserTurn);
+  const messages = [{ role, content: '<history>' }];
   if (nonblank(summaryception)) {
     messages.push({
       role: 'system',
@@ -131,28 +139,48 @@ export function buildPlannerContextMessages({ presetPrompts, history, summarycep
       content: `<message${name}>\n${message.content}\n</message>`,
     });
   }
-  messages.push(
-    { role: 'system', content: '</history>' },
-    {
-      role: 'system',
-      content: [
-        '<task>',
-        'Fill the supplied Planner template for the next roleplay response. Use the conversation history and any relevant facts or constraints from the preset reference. The template is a form to complete, not a command to perform another hidden process. Its wording about internal processing and a final response describes how the later Response model will use this Planning document. Fill the form directly. Your output is the filled Planner template itself. Preserve every phase, gate, and requested item in order. Fill each item with concrete conclusions for this scene. Do not copy the questions, explain your work outside the template, or write the roleplay response.',
-        '</task>',
-      ].join('\n'),
-    },
-    {
-      role: 'system',
-      content: [
-        '<planner_template>',
-        String(plannerTemplate ?? ''),
-        '</planner_template>',
-      ].join('\n'),
-    },
-    {
-      role: hasUserTurn ? 'system' : 'user',
-      content: 'Begin Planning now. Start immediately with the Planner template\'s first section. Preserve its complete structure and fill it sequentially. Output only the completed Planning document.',
-    },
-  );
+  messages.push({ role, content: '</history>' });
+  return messages;
+}
+
+export function buildPlannerContextMessages({
+  arrangement = DEFAULT_SETTINGS.planner.arrangements[0],
+  presetPrompts,
+  history,
+  summaryception,
+  plannerTemplate,
+  substituteParams,
+}) {
+  const hasUserTurn = Array.isArray(history)
+    && history.some((message) => message.role === 'user');
+  const expand = typeof substituteParams === 'function'
+    ? substituteParams
+    : (content) => content;
+  const messages = [];
+  const blocks = Array.isArray(arrangement?.blocks)
+    ? [...arrangement.blocks].sort((left, right) => left.order - right.order)
+    : [];
+  for (const block of blocks) {
+    if (block.enabled !== true && block.slot !== 'template') continue;
+    if (block.kind === 'text') {
+      messages.push({
+        role: resolvedRole(block.role, hasUserTurn),
+        content: expand(block.body),
+      });
+    } else if (block.slot === 'preset') {
+      messages.push(...presetMessages(block, presetPrompts, hasUserTurn));
+    } else if (block.slot === 'history') {
+      messages.push(...historyMessages(block, history, summaryception, hasUserTurn));
+    } else if (block.slot === 'template') {
+      messages.push({
+        role: resolvedRole(block.role, hasUserTurn),
+        content: [
+          '<planner_template>',
+          String(plannerTemplate ?? ''),
+          '</planner_template>',
+        ].join('\n'),
+      });
+    }
+  }
   return messages;
 }

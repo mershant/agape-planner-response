@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/gpt-5.6-sol, at: 2026-09-06T04:08:06Z }
+generated: { by: opencode/gpt-5.6-sol, at: 2026-09-06T04:28:32Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -69,7 +69,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 87 deterministic tests pass. The former structural
+- **Automated tests:** 90 deterministic tests pass. The former structural
   Planning validator and its tests were removed because the extension cannot
   know whether an arbitrary user-authored template is complete; only blank
   visible Planner output is rejected.
@@ -132,9 +132,9 @@ not the new product foundation.
   `https://github.com/mershant/agape-planner-response` after David directed
   publication for installation on main.
 - **Planner arrangement editor:** arrangement storage, legacy-setting migration,
-  active selection, and malformed-data normalization are implemented and
-  deterministically tested. Arrangement-driven packet assembly and the editor
-  UI remain tracked by later repository tickets.
+  active selection, malformed-data normalization, and arrangement-driven packet
+  assembly are implemented and deterministically tested. The editor UI remains
+  tracked by a later repository ticket.
 
 Only this section owns changing implementation and acceptance status.
 

@@ -22,6 +22,7 @@ export function buildPlannerRequest(prompt, substituteParams, plannerContext = {
     messages: buildPlannerContextMessages({
       ...plannerContext,
       plannerTemplate: expandedTemplate,
+      substituteParams,
     }),
   };
 }

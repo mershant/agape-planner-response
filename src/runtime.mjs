@@ -19,7 +19,7 @@ import { balanceStreamingMarkdown } from './streaming-markdown.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
 import { captureNormalResponseMessages } from './response-context.mjs';
 import { createRuntimeKernel, validateNativeUserTurn } from './runtime-kernel.mjs';
-import { getActivePlannerContext, normalizeSettings } from './settings.mjs';
+import { getActiveArrangement, getActivePlannerContext, normalizeSettings } from './settings.mjs';
 import {
   mergeExcludedFields,
   requestStageDetailed,
@@ -108,6 +108,7 @@ async function runOneCandidate(
           promptManager.activeCharacter,
         ) ?? [];
         return {
+          arrangement: getActiveArrangement(plannerSettings),
           presetPrompts: plannerContext.contextMode === 'preset'
             ? collectActivePresetPrompts({
               prompts: context.chatCompletionSettings?.prompts,

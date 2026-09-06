@@ -7,14 +7,39 @@ import {
   requireVisibleText,
 } from '../src/contracts.mjs';
 
+test('Planner expands the template and each enabled text block exactly once', () => {
+  const calls = [];
+  const arrangement = {
+    name: 'Macros',
+    blocks: [
+      { kind: 'text', name: 'Before', enabled: true, order: 0, role: 'system', body: 'Before {{slot}}' },
+      { kind: 'slot', slot: 'template', name: 'Template', enabled: true, order: 1, role: 'system' },
+      { kind: 'text', name: 'After', enabled: true, order: 2, role: 'auto', body: 'After {{slot}}' },
+    ],
+  };
+
+  const messages = buildPlannerMessages('Template {{slot}}', (text) => {
+    calls.push(text);
+    return text.replace('{{slot}}', 'expanded');
+  }, { arrangement, history: [] });
+
+  assert.deepEqual(calls, ['Template {{slot}}', 'Before {{slot}}', 'After {{slot}}']);
+  assert.deepEqual(messages, [
+    { role: 'system', content: 'Before expanded' },
+    { role: 'system', content: '<planner_template>\nTemplate expanded\n</planner_template>' },
+    { role: 'user', content: 'After expanded' },
+  ]);
+});
+
 test('Planner receives a native contextual message sequence with its expanded template last', () => {
   const calls = [];
   const messages = buildPlannerMessages('State: {{getvar::state}}', (prompt) => {
     calls.push(prompt);
-    return 'State: active';
+    return prompt.replace('{{getvar::state}}', 'active');
   });
 
-  assert.deepEqual(calls, ['State: {{getvar::state}}']);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0], 'State: {{getvar::state}}');
   assert.equal(messages.length, 5);
   assert.deepEqual(messages.map((message) => message.role), ['system', 'system', 'system', 'system', 'user']);
   assert.match(messages[2].content, /^<task>/);

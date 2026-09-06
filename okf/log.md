@@ -2,6 +2,7 @@
 
 ## 2026-09-06
 
+- **Arrangement packet assembly**: Planner requests now follow the active arrangement's block order, toggles, roles, slot settings, and native-expanded text. Deterministic checks preserve the proven Default packet byte for byte and cover reorder, disable, added-text, role-override, and adaptive-role behavior.
 - **Arrangement storage**: Added the named Planner arrangement schema, a protected Default and template slot, active selection, legacy context migration, and safe normalization with deterministic tests. Existing controls and runtime reads now persist through the active arrangement while packet ordering and the full editor remain later ticket work.
 
 ## 2026-09-05
