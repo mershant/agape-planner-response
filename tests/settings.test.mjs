@@ -23,8 +23,9 @@ test('settings contain the safe Default arrangement schema', () => {
   assert.deepEqual(DEFAULT_SETTINGS.planner.arrangements, [{
     name: 'Default',
     blocks: [
-      { kind: 'slot', slot: 'preset', name: 'Preset', enabled: false, order: 0, role: 'system' },
+      { id: 'preset', kind: 'slot', slot: 'preset', name: 'Preset', enabled: false, order: 0, role: 'system' },
       {
+        id: 'history',
         kind: 'slot',
         slot: 'history',
         name: 'History',
@@ -35,9 +36,9 @@ test('settings contain the safe Default arrangement schema', () => {
         historyDepth: 5,
         includeSummaryception: true,
       },
-      { kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
-      { kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
-      { kind: 'text', name: 'Start command', enabled: true, order: 4, role: 'auto', body: START_BODY },
+      { id: 'task', kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
+      { id: 'template', kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
+      { id: 'start-command', kind: 'text', name: 'Start command', enabled: true, order: 4, role: 'auto', body: START_BODY },
     ],
   }]);
   assert.equal(DEFAULT_SETTINGS.response.source, 'profile');

@@ -69,7 +69,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 90 deterministic tests pass. The former structural
+- **Automated tests:** 94 deterministic tests pass. The former structural
   Planning validator and its tests were removed because the extension cannot
   know whether an arbitrary user-authored template is complete; only blank
   visible Planner output is rejected.
@@ -132,9 +132,13 @@ not the new product foundation.
   `https://github.com/mershant/agape-planner-response` after David directed
   publication for installation on main.
 - **Planner arrangement editor:** arrangement storage, legacy-setting migration,
-  active selection, malformed-data normalization, and arrangement-driven packet
-  assembly are implemented and deterministically tested. The editor UI remains
-  tracked by a later repository ticket.
+  active selection, malformed-data normalization, arrangement-driven packet
+  assembly, and the desktop/mobile editor UI are implemented and deterministically
+  tested. The UI loaded under both the repository install name and a foreign valid
+  install name without model requests; create, add, edit, reorder, and persistence
+  were observed in isolated SillyTavern Dev. The custom arrangement's normal,
+  swipe, regenerate, and two Stop live gate remains unproven because the current
+  STD and Summaryception versions rejected import of the latest main-chat snapshot.
 
 Only this section owns changing implementation and acceptance status.
 

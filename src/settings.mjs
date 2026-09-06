@@ -1,5 +1,6 @@
 const CONNECTION_SOURCE = new Set(['profile', 'custom']);
-const BLOCK_ROLES = new Set(['system', 'user', 'assistant', 'auto']);
+export const BLOCK_ROLES = Object.freeze(['system', 'user', 'assistant', 'auto']);
+const BLOCK_ROLE_SET = new Set(BLOCK_ROLES);
 const SLOT_NAMES = new Set(['preset', 'history', 'template']);
 
 const TASK_BODY = `<task>
@@ -25,8 +26,9 @@ function defaultArrangement({
   return {
     name: 'Default',
     blocks: [
-      { kind: 'slot', slot: 'preset', name: 'Preset', enabled: presetEnabled, order: 0, role: 'system' },
+      { id: 'preset', kind: 'slot', slot: 'preset', name: 'Preset', enabled: presetEnabled, order: 0, role: 'system' },
       {
+        id: 'history',
         kind: 'slot',
         slot: 'history',
         name: 'History',
@@ -37,9 +39,9 @@ function defaultArrangement({
         historyDepth,
         includeSummaryception,
       },
-      { kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
-      { kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
-      { kind: 'text', name: 'Start command', enabled: true, order: 4, role: 'auto', body: START_BODY },
+      { id: 'task', kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
+      { id: 'template', kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
+      { id: 'start-command', kind: 'text', name: 'Start command', enabled: true, order: 4, role: 'auto', body: START_BODY },
     ],
   };
 }
@@ -96,17 +98,18 @@ function normalizeStage(value) {
   };
 }
 
-function normalizeBlock(value) {
+function normalizeBlock(value, fallbackId) {
   const source = objectValue(value);
   const name = stringValue(source.name).trim();
   const validCommon = name
     && typeof source.enabled === 'boolean'
     && Number.isInteger(source.order)
     && source.order >= 0
-    && BLOCK_ROLES.has(source.role);
+    && BLOCK_ROLE_SET.has(source.role);
   if (!validCommon) return null;
 
   const common = {
+    id: stringValue(source.id).trim() || fallbackId,
     kind: source.kind,
     name,
     enabled: source.enabled,
@@ -131,8 +134,14 @@ function normalizeArrangement(value) {
   const name = stringValue(source.name).trim();
   if (!name || !Array.isArray(source.blocks)) return null;
 
-  const blocks = source.blocks.map(normalizeBlock);
+  const blocks = source.blocks.map((block, index) => normalizeBlock(
+    block,
+    block?.kind === 'slot' && SLOT_NAMES.has(block.slot)
+      ? block.slot
+      : `text-${index + 1}`,
+  ));
   if (blocks.some((block) => block === null)) return null;
+  if (new Set(blocks.map(({ id }) => id)).size !== blocks.length) return null;
   const slotNames = blocks
     .filter((block) => block.kind === 'slot')
     .map((block) => block.slot);

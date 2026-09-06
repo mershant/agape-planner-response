@@ -1,11 +1,25 @@
 import {
+  BLOCK_ROLES,
   getActiveArrangement,
-  getActivePlannerContext,
-  getArrangementSlot,
   normalizeSettings,
 } from './settings.mjs';
+import {
+  addTextBlock,
+  createArrangement,
+  deleteActiveArrangement,
+  moveBlock,
+  removeBlock,
+  renameActiveArrangement,
+  resetActiveArrangement,
+  switchArrangement,
+  updateBlock,
+} from './arrangement-editor.mjs';
 
 const ROOT_ID = 'agape-planner-response-settings';
+const extensionFolder = decodeURIComponent(
+  new URL('../', import.meta.url).pathname.split('/').filter(Boolean).at(-1),
+);
+const TEMPLATE_PATH = `third-party/${extensionFolder}`;
 
 function chatCompletionProfiles(context) {
   const manager = context.extensionSettings?.connectionManager ?? {};
@@ -48,7 +62,7 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
   if (existing?.__agapePlannerResponse) return existing.__agapePlannerResponse;
 
   const html = await context.renderExtensionTemplateAsync(
-    'third-party/agape-planner-response',
+    TEMPLATE_PATH,
     'settings',
   );
   const host = document.querySelector('#extensions_settings2')
@@ -61,10 +75,6 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
   let settings = normalizeSettings(initialSettings);
   const byId = (id) => root.querySelector(`#${id}`);
   const status = byId('agape-planner-response-status');
-  const activePlannerSlot = (slot) => getArrangementSlot(
-    getActiveArrangement(settings.planner),
-    slot,
-  );
 
   function persist() {
     settings = normalizeSettings(settings);
@@ -83,22 +93,143 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     root.querySelector(`[data-stage-panel="${stageName}-custom"]`).hidden = stage.source !== 'custom';
     const keyState = byId(`${prefix}-key-state`);
     keyState.textContent = stage.secretId ? 'API key saved in SillyTavern' : 'No saved API key (keyless is allowed)';
-    if (stageName === 'planner') {
-      const plannerContext = getActivePlannerContext(stage);
-      byId('agape-planner-context-mode').value = plannerContext.contextMode;
-      byId('agape-planner-history-mode').value = plannerContext.historyMode;
-      byId('agape-planner-history-depth').value = String(plannerContext.historyDepth);
-      root.querySelector('[data-stage-panel="planner-history-depth"]').hidden = plannerContext.historyMode !== 'depth';
-      const summaryception = byId('agape-planner-summaryception');
-      summaryception.checked = plannerContext.includeSummaryception;
-      summaryception.disabled = plannerContext.historyMode !== 'full';
+  }
+
+  const element = (tag, attributes = {}, text = '') => {
+    const node = document.createElement(tag);
+    for (const [name, value] of Object.entries(attributes)) {
+      if (name === 'className') node.className = value;
+      else if (name === 'dataset') Object.assign(node.dataset, value);
+      else node[name] = value;
     }
+    node.textContent = text;
+    return node;
+  };
+
+  function rolePicker(block) {
+    const select = element('select', {
+      className: 'text_pole agape-pr__block-role',
+      ariaLabel: `${block.name} role`,
+      dataset: { blockAction: 'role', blockId: block.id },
+    });
+    for (const role of BLOCK_ROLES) {
+      select.append(element('option', { value: role, selected: block.role === role }, role));
+    }
+    return select;
+  }
+
+  function blockTools(block, index, count) {
+    const tools = element('div', { className: 'agape-pr__block-tools' });
+    const addButton = (label, action, disabled = false, title = '') => tools.append(element('button', {
+      className: 'menu_button',
+      type: 'button',
+      disabled,
+      title,
+      ariaLabel: title || label,
+      dataset: { blockAction: action, blockId: block.id },
+    }, label));
+    addButton('↑', 'up', index === 0, `Move ${block.name} up`);
+    addButton('↓', 'down', index === count - 1, `Move ${block.name} down`);
+    if (block.kind === 'text') addButton('Remove', 'remove', false, `Remove ${block.name}`);
+    if (block.slot !== 'template') {
+      const enabled = element('label', { className: 'checkbox_label agape-pr__block-enabled' });
+      enabled.append(
+        element('input', {
+          type: 'checkbox',
+          checked: block.enabled,
+          dataset: { blockAction: 'enabled', blockId: block.id },
+        }),
+        element('span', {}, 'Enabled'),
+      );
+      tools.append(enabled);
+    }
+    return tools;
+  }
+
+  function historyOptions(block) {
+    const options = element('div', { className: 'agape-pr__history-options' });
+    const mode = element('select', {
+      className: 'text_pole',
+      ariaLabel: 'Conversation history range',
+      dataset: { blockAction: 'history-mode', blockId: block.id },
+    });
+    mode.append(
+      element('option', { value: 'full', selected: block.historyMode === 'full' }, 'Full history'),
+      element('option', { value: 'depth', selected: block.historyMode === 'depth' }, 'Recent messages only'),
+    );
+    options.append(mode);
+    if (block.historyMode === 'depth') {
+      options.append(element('input', {
+        className: 'text_pole',
+        type: 'number',
+        min: '0',
+        max: '100',
+        step: '1',
+        value: String(block.historyDepth),
+        ariaLabel: 'History depth in messages',
+        dataset: { blockAction: 'history-depth', blockId: block.id },
+      }));
+    } else {
+      const label = element('label', { className: 'checkbox_label' });
+      label.append(
+        element('input', {
+          type: 'checkbox',
+          checked: block.includeSummaryception,
+          dataset: { blockAction: 'summaryception', blockId: block.id },
+        }),
+        element('span', {}, 'Include Summaryception'),
+      );
+      options.append(label);
+    }
+    return options;
+  }
+
+  function renderArrangement() {
+    const arrangement = getActiveArrangement(settings.planner);
+    const select = byId('agape-planner-arrangement');
+    select.replaceChildren(...settings.planner.arrangements.map(({ name }) => element(
+      'option',
+      { value: name, selected: name === settings.planner.activeArrangement },
+      name,
+    )));
+    byId('agape-arrangement-delete').disabled = arrangement.name === 'Default';
+    const blocks = byId('agape-arrangement-blocks');
+    blocks.replaceChildren(...arrangement.blocks.map((block, index) => {
+      const row = element('article', {
+        className: 'agape-pr__block',
+        dataset: { blockId: block.id, enabled: String(block.enabled) },
+      });
+      row.append(element('span', {
+        className: 'agape-pr__drag',
+        draggable: true,
+        title: 'Drag to reorder',
+        ariaHidden: 'true',
+      }, '☰'));
+      row.append(element('input', {
+        className: 'text_pole agape-pr__block-name',
+        type: 'text',
+        value: block.name,
+        ariaLabel: 'Block name',
+        dataset: { blockAction: 'name', blockId: block.id },
+      }));
+      row.append(rolePicker(block), blockTools(block, index, arrangement.blocks.length));
+      if (block.kind === 'text') row.append(element('textarea', {
+        className: 'text_pole agape-pr__block-body',
+        value: block.body,
+        spellcheck: false,
+        ariaLabel: `${block.name} text`,
+        dataset: { blockAction: 'body', blockId: block.id },
+      }));
+      if (block.slot === 'history') row.append(historyOptions(block));
+      return row;
+    }));
   }
 
   byId('agape-planner-response-enabled').checked = settings.enabled;
   byId('agape-planner-prompt').value = settings.plannerPrompt;
   renderStage('planner');
   renderStage('response');
+  renderArrangement();
   status.textContent = settings.enabled ? 'Ready' : 'Disabled';
 
   byId('agape-planner-response-enabled').addEventListener('change', (event) => {
@@ -160,35 +291,96 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
     });
   }
 
-  byId('agape-planner-history-mode').addEventListener('change', (event) => {
-    const history = activePlannerSlot('history');
-    if (history) {
-      history.historyMode = event.currentTarget.value;
-      if (history.historyMode === 'depth') history.includeSummaryception = false;
+  const applyPlannerEdit = (edit, { render = true } = {}) => {
+    try {
+      settings.planner = edit(settings.planner);
+      persist();
+      if (render) renderArrangement();
+    } catch (error) {
+      globalThis.toastr?.warning(error.message, 'Planner arrangement');
     }
-    persist();
-    renderStage('planner');
+  };
+
+  byId('agape-planner-arrangement').addEventListener('change', (event) => {
+    applyPlannerEdit((planner) => switchArrangement(planner, event.currentTarget.value));
   });
-  byId('agape-planner-context-mode').addEventListener('change', (event) => {
-    const preset = activePlannerSlot('preset');
-    if (preset) preset.enabled = event.currentTarget.value === 'preset';
-    persist();
-    renderStage('planner');
+  byId('agape-arrangement-create').addEventListener('click', () => {
+    const name = globalThis.prompt?.('Name the new arrangement:');
+    if (name !== null && name !== undefined) applyPlannerEdit((planner) => createArrangement(planner, name));
   });
-  byId('agape-planner-history-depth').addEventListener('input', (event) => {
-    const history = activePlannerSlot('history');
-    if (history) history.historyDepth = event.currentTarget.valueAsNumber;
-    persist();
-    renderStage('planner');
+  byId('agape-arrangement-rename').addEventListener('click', () => {
+    const name = globalThis.prompt?.('Rename this arrangement:', settings.planner.activeArrangement);
+    if (name !== null && name !== undefined) applyPlannerEdit((planner) => renameActiveArrangement(planner, name));
   });
-  byId('agape-planner-summaryception').addEventListener('change', (event) => {
-    const history = activePlannerSlot('history');
-    if (history) {
-      history.includeSummaryception = history.historyMode === 'full'
-        && event.currentTarget.checked;
+  byId('agape-arrangement-delete').addEventListener('click', () => {
+    if (globalThis.confirm?.(`Delete “${settings.planner.activeArrangement}”?`)) {
+      applyPlannerEdit(deleteActiveArrangement);
     }
-    persist();
-    renderStage('planner');
+  });
+  byId('agape-arrangement-reset').addEventListener('click', () => {
+    if (globalThis.confirm?.(`Reset “${settings.planner.activeArrangement}” to the Default block layout?`)) {
+      applyPlannerEdit(resetActiveArrangement);
+    }
+  });
+  byId('agape-arrangement-add-text').addEventListener('click', () => {
+    const name = globalThis.prompt?.('Name the text block:', 'Text block');
+    if (name !== null && name !== undefined) applyPlannerEdit((planner) => addTextBlock(planner, name));
+  });
+
+  const blocks = byId('agape-arrangement-blocks');
+  blocks.addEventListener('input', (event) => {
+    const { blockAction, blockId } = event.target.dataset;
+    if (blockAction !== 'body') return;
+    applyPlannerEdit(
+      (planner) => updateBlock(planner, blockId, { body: event.target.value }),
+      { render: false },
+    );
+  });
+  blocks.addEventListener('change', (event) => {
+    const { blockAction, blockId } = event.target.dataset;
+    if (!blockAction || blockAction === 'body') return;
+    const edits = {
+      name: { name: event.target.value },
+      enabled: { enabled: event.target.checked },
+      role: { role: event.target.value },
+      'history-mode': { historyMode: event.target.value },
+      'history-depth': { historyDepth: event.target.valueAsNumber },
+      summaryception: { includeSummaryception: event.target.checked },
+    };
+    applyPlannerEdit((planner) => updateBlock(planner, blockId, edits[blockAction]));
+  });
+  blocks.addEventListener('click', (event) => {
+    const { blockAction, blockId } = event.target.dataset;
+    if (blockAction === 'up') applyPlannerEdit((planner) => moveBlock(planner, blockId, -1));
+    if (blockAction === 'down') applyPlannerEdit((planner) => moveBlock(planner, blockId, 1));
+    if (blockAction === 'remove' && globalThis.confirm?.('Remove this text block?')) {
+      applyPlannerEdit((planner) => removeBlock(planner, blockId));
+    }
+  });
+
+  let draggedBlockId = '';
+  blocks.addEventListener('dragstart', (event) => {
+    const row = event.target.closest('.agape-pr__block');
+    if (!row) return;
+    draggedBlockId = row.dataset.blockId;
+    row.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+  });
+  blocks.addEventListener('dragover', (event) => {
+    if (event.target.closest('.agape-pr__block')) event.preventDefault();
+  });
+  blocks.addEventListener('drop', (event) => {
+    const target = event.target.closest('.agape-pr__block');
+    if (!target || !draggedBlockId || target.dataset.blockId === draggedBlockId) return;
+    event.preventDefault();
+    const arrangement = getActiveArrangement(settings.planner);
+    const from = arrangement.blocks.findIndex(({ id }) => id === draggedBlockId);
+    const to = arrangement.blocks.findIndex(({ id }) => id === target.dataset.blockId);
+    applyPlannerEdit((planner) => moveBlock(planner, draggedBlockId, to - from));
+  });
+  blocks.addEventListener('dragend', () => {
+    draggedBlockId = '';
+    blocks.querySelector('.is-dragging')?.classList.remove('is-dragging');
   });
 
   const controller = {

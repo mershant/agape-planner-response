@@ -11,9 +11,24 @@
         <span><strong>Run Planner before normal Send</strong></span>
       </label>
 
+      <section class="agape-pr__stage agape-pr__arrangement" aria-labelledby="agape-arrangement-heading">
+        <h4 id="agape-arrangement-heading">Planner arrangement</h4>
+        <label for="agape-planner-arrangement">Arrangement</label>
+        <div class="agape-pr__arrangement-bar">
+          <select id="agape-planner-arrangement" class="text_pole"></select>
+          <button id="agape-arrangement-create" class="menu_button" type="button">New</button>
+          <button id="agape-arrangement-rename" class="menu_button" type="button">Rename</button>
+          <button id="agape-arrangement-delete" class="menu_button" type="button">Delete</button>
+          <button id="agape-arrangement-reset" class="menu_button" type="button">Reset</button>
+        </div>
+        <small>Drag blocks to reorder them. Editing an arrangement only saves settings; it never calls a model.</small>
+        <div id="agape-arrangement-blocks" class="agape-pr__blocks"></div>
+        <button id="agape-arrangement-add-text" class="menu_button agape-pr__add-block" type="button">Add text block</button>
+      </section>
+
       <label for="agape-planner-prompt"><strong>Planner template</strong></label>
       <textarea id="agape-planner-prompt" class="text_pole agape-pr__prompt" rows="18" spellcheck="false" placeholder="Write the template the Planner should fill. Native SillyTavern macros and variables are expanded when Send begins."></textarea>
-      <small>Saved literally. It is placed after the active preset context and selected conversation history. Completed Planning appears before Response starts.</small>
+      <small>Saved literally. The active arrangement places this text through its Planner template block. Completed Planning appears before Response starts.</small>
 
       <section class="agape-pr__stage" aria-labelledby="agape-planner-heading">
         <h4 id="agape-planner-heading">Planner connection</h4>
@@ -40,26 +55,6 @@
         <label for="agape-planner-model">Model override</label>
         <input id="agape-planner-model" class="text_pole" type="text" placeholder="Blank uses the profile model">
 
-        <label for="agape-planner-context-mode">Planner context</label>
-        <select id="agape-planner-context-mode" class="text_pole">
-          <option value="minimal">Minimal context</option>
-          <option value="preset">Current active preset context</option>
-        </select>
-        <small>The preset option wraps all enabled prompts from the active preset inside one &lt;preset&gt; block.</small>
-
-        <label for="agape-planner-history-mode">Conversation history</label>
-        <select id="agape-planner-history-mode" class="text_pole">
-          <option value="full">Full history</option>
-          <option value="depth">Recent messages only</option>
-        </select>
-        <div data-stage-panel="planner-history-depth" hidden>
-          <label for="agape-planner-history-depth">History depth in messages</label>
-          <input id="agape-planner-history-depth" class="text_pole" type="number" min="0" max="100" step="1">
-        </div>
-        <label class="checkbox_label" for="agape-planner-summaryception">
-          <input id="agape-planner-summaryception" type="checkbox">
-          <span><strong>Include Summaryception</strong><small>Available only with full history.</small></span>
-        </label>
       </section>
 
       <section class="agape-pr__stage" aria-labelledby="agape-response-heading">
