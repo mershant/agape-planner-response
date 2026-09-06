@@ -115,7 +115,16 @@ export function updateBlock(planner, reference, changes) {
     }
     const allowed = ['name', 'enabled', 'role'];
     if (block.kind === 'text') allowed.push('body');
-    if (block.slot === 'history') allowed.push('historyMode', 'historyDepth', 'includeSummaryception');
+    if (block.slot === 'history') {
+      allowed.push(
+        'historyMode',
+        'historyDepth',
+        'includeSummaryception',
+        'includeLorebook',
+        'includeExtensionInjections',
+        'includeAuthorsNote',
+      );
+    }
     for (const key of allowed) {
       if (Object.hasOwn(changes, key)) block[key] = changes[key];
     }

@@ -1,5 +1,15 @@
-import { cleanUpMessage } from '/script.js';
-import { ChatCompletion, promptManager } from '/scripts/openai.js';
+import {
+  cleanUpMessage,
+  extension_prompt_types,
+  getExtensionPrompt,
+} from '/script.js';
+import {
+  ChatCompletion,
+  getPromptRole,
+  promptManager,
+} from '/scripts/openai.js';
+import { NOTE_MODULE_NAME } from '/scripts/authors-note.js';
+import { inject_ids } from '/scripts/constants.js';
 import { rotateSecret, SECRET_KEYS, secret_state, writeSecret } from '/scripts/secrets.js';
 
 import {
@@ -17,7 +27,15 @@ import {
 import { historyForGeneration, isPlannedGeneration } from './generation-candidate.mjs';
 import { balanceStreamingMarkdown } from './streaming-markdown.mjs';
 import { clonePromptCollection } from './prompt-collection.mjs';
-import { captureNormalResponseMessages } from './response-context.mjs';
+import {
+  buildNativePromptContent,
+  collectNativeInjectionSlices,
+  hostInjectionKind,
+} from './native-prompt-view.mjs';
+import {
+  captureAssembledPrompt,
+  captureNormalResponseMessages,
+} from './response-context.mjs';
 import { createRuntimeKernel, validateNativeUserTurn } from './runtime-kernel.mjs';
 import { getActiveArrangement, getActivePlannerContext, normalizeSettings } from './settings.mjs';
 import {
@@ -55,6 +73,83 @@ function cleanResponse(text, final) {
   });
 }
 
+function wantsNativePlannerContent(settings) {
+  return settings.includeLorebook === true
+    || settings.includeExtensionInjections === true
+    || settings.includeAuthorsNote === true;
+}
+
+function nativeInjectionKind(key) {
+  return hostInjectionKind(key, {
+    authorsNoteKey: NOTE_MODULE_NAME,
+    lorebookPrefix: inject_ids.CUSTOM_WI_DEPTH,
+    excludedPrefixes: [
+      inject_ids.DEPTH_PROMPT,
+      inject_ids.QUIET_PROMPT,
+      inject_ids.STORY_STRING,
+    ],
+  });
+}
+
+async function withoutRegeneratedCandidate(context, generationType, callback) {
+  const candidate = generationType === 'regenerate' ? context.chat?.at(-1) : null;
+  if (!candidate || candidate.is_user === true) return callback();
+  const previous = candidate.is_system;
+  candidate.is_system = true;
+  try {
+    return await callback();
+  } finally {
+    if (previous === undefined) delete candidate.is_system;
+    else candidate.is_system = previous;
+  }
+}
+
+async function captureNativePlannerContent(context, generationType, chat) {
+  const scanEvent = context.eventTypes?.WORLDINFO_SCAN_DONE;
+  let authorsNoteSource = context.extensionPrompts?.[NOTE_MODULE_NAME]?.value ?? '';
+  const captureAuthorsNoteSource = () => {
+    authorsNoteSource = context.extensionPrompts?.[NOTE_MODULE_NAME]?.value ?? '';
+  };
+  if (scanEvent) context.eventSource.on(scanEvent, captureAuthorsNoteSource);
+  try {
+    await withoutRegeneratedCandidate(context, generationType, () => (
+      captureAssembledPrompt(context, generationType)
+    ));
+  } finally {
+    if (scanEvent) context.eventSource.removeListener(scanEvent, captureAuthorsNoteSource);
+  }
+
+  const promptCollection = clonePromptCollection(
+    promptManager.getMessages?.() ?? promptManager.messages,
+  );
+  const injectionSlices = await collectNativeInjectionSlices({
+    prompts: context.extensionPrompts,
+    inChatPosition: extension_prompt_types.IN_CHAT,
+    authorsNoteKey: NOTE_MODULE_NAME,
+    authorsNoteSource,
+    kindForKey: nativeInjectionKind,
+    render: getExtensionPrompt,
+    roleName: getPromptRole,
+  });
+  const authorsNote = context.extensionPrompts?.[NOTE_MODULE_NAME];
+  const authorsNoteContent = promptManager.preparePrompt({
+    identifier: 'authorsNote',
+    role: getPromptRole(authorsNote?.role),
+    content: authorsNoteSource,
+  }).content;
+
+  return buildNativePromptContent({
+    promptCollection,
+    injectionSlices,
+    authorsNoteContent,
+    conversationContents: (Array.isArray(chat) ? chat : [])
+      .filter((message) => message?.is_system !== true
+        && message?.extra?.[Symbol.for('ignore')] !== true)
+      .map((message) => message?.mes)
+      .filter((value) => typeof value === 'string' && value.trim() !== ''),
+  });
+}
+
 async function runOneCandidate(
   settings,
   generationType,
@@ -80,6 +175,10 @@ async function runOneCandidate(
       collectPlannerContext: async (plannerSettings) => {
         const context = getContext();
         const plannerContext = getActivePlannerContext(plannerSettings);
+        const nativePromptContent = wantsNativePlannerContent(plannerContext)
+          ? await captureNativePlannerContent(context, generationType, plannerHistorySource)
+          : {};
+        signal?.throwIfAborted?.();
         const promptOrder = promptManager.getPromptOrderForCharacter?.(
           promptManager.activeCharacter,
         ) ?? [];
@@ -96,6 +195,7 @@ async function runOneCandidate(
           history: collectPlannerHistory(
             plannerHistorySource,
             plannerContext,
+            nativePromptContent,
           ),
           summaryception: plannerContext.includeSummaryception
             ? extractSummaryceptionText(context.chatMetadata)

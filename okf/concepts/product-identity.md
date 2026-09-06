@@ -4,7 +4,7 @@ title: AGAPE Planner Response Product Identity
 description: Defines the clean two-model SillyTavern extension and owns implementation status.
 tags: [agape, sillytavern, planner, response]
 status: stable
-generated: { by: opencode/grok-4.6, at: 2026-09-06T18:00:00Z }
+generated: { by: openai/gpt-5.6-sol, at: 2026-09-06T14:55:15Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -36,6 +36,11 @@ sources:
     title: David's Planner arrangement editor direction
     author: human:david
     last_modified: 2026-09-05
+  - id: ticket-9
+    resource: https://github.com/mershant/agape-planner-response/issues/9
+    title: Planner visibility options ticket
+    author: human:product-owner
+    last_modified: 2026-09-06
 ---
 
 # Product
@@ -69,7 +74,7 @@ not the new product foundation.
   system message.
 - **Runtime extension:** written and loaded from the canonical repository into
   isolated SillyTavern Dev.
-- **Automated tests:** 110 deterministic tests pass. The former structural
+- **Automated tests:** 123 deterministic tests pass. The former structural
   Planning validator and its tests were removed because the extension cannot
   know whether an arbitrary user-authored template is complete; only blank
   visible Planner output is rejected.
@@ -154,6 +159,14 @@ not the new product foundation.
   were observed in isolated SillyTavern Dev. The custom arrangement's normal,
   swipe, regenerate, and two Stop live gate remains unproven because the current
   STD and Summaryception versions rejected import of the latest main-chat snapshot.
+- **Planner native-content visibility:** written and deterministically tested.
+  Lorebook, extension in-chat injection, and author's-note controls are
+  independent, saved on each arrangement's History block, and default off. In
+  isolated SillyTavern Dev, one all-off Send kept both test markers out of the
+  Planner request; one lorebook-only Send placed a natively activated entry
+  inside History; and one extension-only Send placed a generic in-chat block
+  directly after its anchor while excluding active lore. Each completed with
+  one Planner request and one Response request.
 
 Only this section owns changing implementation and acceptance status.
 
@@ -167,7 +180,9 @@ and two model connections:
   Chat Completion API;
 - Planner arrangement: named, switchable block arrangements owned by the
   [Planner Request Contract](planner-request-contract.md), carrying the preset
-  toggle, history mode and depth, and Summaryception option on their blocks;
+  toggle, history mode and depth, Summaryception, and three default-off History
+  visibility options for triggered lorebook entries, extension in-chat
+  injections, and author's note;
 - Response connection: current or selected SillyTavern profile, or direct
   custom Chat Completion API;
 - Response retry: minimum word count, default 100, and retry count, default 5;
@@ -197,7 +212,7 @@ active SillyTavern Response prompt.
 
 # Excluded architecture
 
-No phase scaffold, EGO system, mode system, independent lore injection,
+No phase scaffold, EGO system, mode system, competing lore activation or injection,
 planning store, swipe lineage, renderer constitution, closed-world audit,
 privacy firewall, or structured Planning protocol enters the clean core unless
 David later directs a separately bounded addition. The current bounded preset

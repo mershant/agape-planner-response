@@ -4,7 +4,7 @@ title: Planner Request Contract
 description: Defines the exact contextual cross-provider request sent to the selected Planner model and the user-editable arrangement that assembles it.
 tags: [planner, request, macros, arrangement]
 status: stable
-generated: { by: opencode/grok-4.6, at: 2026-09-06T18:00:00Z }
+generated: { by: openai/gpt-5.6-sol, at: 2026-09-06T14:55:15Z }
 sources:
   - id: david-direction
     resource: /sources/david-simple-planner-response-direction-2026-08-19.md
@@ -35,6 +35,11 @@ sources:
     title: David's Planner arrangement editor direction
     author: human:david
     last_modified: 2026-09-05
+  - id: ticket-9
+    resource: https://github.com/mershant/agape-planner-response/issues/9
+    title: Planner visibility options ticket
+    author: human:product-owner
+    last_modified: 2026-09-06
 ---
 
 # Stored template
@@ -68,8 +73,10 @@ There are two kinds of blocks:
     replaces the former Minimal-versus-preset dropdown: toggled off is
     Minimal.
   - **History** — the selected conversation messages inside one `<history>`
-    boundary. History mode (full or recent depth) and the Summaryception
-    option belong to this block and are saved per arrangement.
+    boundary. History mode (full or recent depth), Summaryception, and separate
+    visibility options for triggered lorebook entries, extension in-chat
+    injections, and author's note belong to this block and are saved per
+    arrangement.
   - **Planner template** — the user's literal template textbox, natively
     expanded once, inside `<planner_template>`. This block can be reordered
     but never deleted or disabled: without it the Planner has no form and
@@ -95,6 +102,10 @@ packet below byte for byte; deterministic tests assert that identity so the
 editor cannot silently regress the live-proven layout. Users can create,
 rename, delete, switch, and reset arrangements. Saving or editing an
 arrangement never calls a model.
+
+All three native-content visibility options default to off in every migrated
+or newly created arrangement. The Default arrangement therefore keeps the
+proven packet below byte for byte until the user opts in.
 
 Existing settings migrate automatically: `minimal` context becomes Default
 with the Preset block off, `preset` context becomes Default with it on, and
@@ -197,6 +208,35 @@ These choices live on the arrangement's slot blocks:
 - **Summaryception:** optional only with full history. Its promoted oldest layer
   is rendered first and live layer last. It is unavailable in recent-message
   mode.
+
+# Native prompt visibility
+
+The History block has three independent options, all off by default:
+
+- **Triggered lorebook / World Info** adds only entries SillyTavern activated
+  for that generation.
+- **Extension in-chat injections** adds any content registered through
+  SillyTavern's normal in-chat injection mechanism, without naming or depending
+  on a particular extension.
+- **Author's note** adds only the active note content.
+
+When any option is on, the extension asks SillyTavern to perform its normal
+Chat Completion dry-run assembly before the Planner call. It reads the
+unsquashed native prompt collection and delegates in-chat rendering to
+SillyTavern. It does not scan lore, decide which lore entry triggers, expand a
+second injection system, or copy another extension's rules.
+
+Native content keeps the role and bytes that SillyTavern assembled. Content
+without a chat anchor stays before or after conversation history according to
+its native prompt position. Depth-based content appears directly after its
+anchor message inside `<history>`. Recent-history depth still selects the
+conversation first: an injection is excluded when its anchor is outside that
+slice, blank, hidden, or excluded from generation. Content omitted by
+SillyTavern's own prompt assembly is also omitted from the Planner packet.
+
+Dry-run assembly is local prompt work, not a model call. Enabling visibility
+does not change the one Planner request per candidate. Saving any option still
+calls neither model.
 
 Saving settings never calls either model. History and Summaryception are read
 for the current operation and are not written by this extension.

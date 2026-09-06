@@ -25,6 +25,9 @@ function defaultArrangement({
   historyMode = 'full',
   historyDepth = 5,
   includeSummaryception = true,
+  includeLorebook = false,
+  includeExtensionInjections = false,
+  includeAuthorsNote = false,
 } = {}) {
   return {
     name: 'Default',
@@ -41,6 +44,9 @@ function defaultArrangement({
         historyMode,
         historyDepth,
         includeSummaryception,
+        includeLorebook,
+        includeExtensionInjections,
+        includeAuthorsNote,
       },
       { id: 'task', kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
       { id: 'template', kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
@@ -95,6 +101,9 @@ function normalizeHistoryOptions(source) {
       && (typeof source.includeSummaryception === 'boolean'
         ? source.includeSummaryception
         : true),
+    includeLorebook: source.includeLorebook === true,
+    includeExtensionInjections: source.includeExtensionInjections === true,
+    includeAuthorsNote: source.includeAuthorsNote === true,
   };
 }
 
@@ -222,6 +231,9 @@ export function getActivePlannerContext(planner) {
     historyMode: history?.historyMode ?? 'full',
     historyDepth: history?.historyDepth ?? 5,
     includeSummaryception: history?.includeSummaryception ?? false,
+    includeLorebook: history?.includeLorebook ?? false,
+    includeExtensionInjections: history?.includeExtensionInjections ?? false,
+    includeAuthorsNote: history?.includeAuthorsNote ?? false,
   };
 }
 

@@ -36,6 +36,9 @@ test('settings contain the safe Default arrangement schema', () => {
         historyMode: 'full',
         historyDepth: 5,
         includeSummaryception: true,
+        includeLorebook: false,
+        includeExtensionInjections: false,
+        includeAuthorsNote: false,
       },
       { id: 'task', kind: 'text', name: 'Task', enabled: true, order: 2, role: 'system', body: TASK_BODY },
       { id: 'template', kind: 'slot', slot: 'template', name: 'Planner template', enabled: true, order: 3, role: 'system' },
@@ -115,6 +118,9 @@ test('existing Planner context settings migrate onto Default arrangement blocks'
   assert.equal(history.historyMode, 'depth');
   assert.equal(history.historyDepth, 3);
   assert.equal(history.includeSummaryception, false);
+  assert.equal(history.includeLorebook, false);
+  assert.equal(history.includeExtensionInjections, false);
+  assert.equal(history.includeAuthorsNote, false);
   assert.equal(Object.hasOwn(settings.planner, 'contextMode'), false);
   assert.equal(Object.hasOwn(settings.planner, 'historyMode'), false);
 });
@@ -134,6 +140,8 @@ test('valid named arrangements and their active selection are normalized determi
   getArrangementSlot(custom, 'preset').enabled = true;
   getArrangementSlot(custom, 'history').historyDepth = 101;
   getArrangementSlot(custom, 'history').includeSummaryception = false;
+  getArrangementSlot(custom, 'history').includeLorebook = true;
+  getArrangementSlot(custom, 'history').includeAuthorsNote = true;
   custom.blocks.push({
     kind: 'text',
     name: 'Reminder',
@@ -162,8 +170,33 @@ test('valid named arrangements and their active selection are normalized determi
     historyMode: 'full',
     historyDepth: 100,
     includeSummaryception: false,
+    includeLorebook: true,
+    includeExtensionInjections: false,
+    includeAuthorsNote: true,
   });
   assert.equal(getActiveArrangement(settings.planner).blocks.at(-1).body, 'Keep this literal.');
+});
+
+test('missing or malformed native visibility options stay off', () => {
+  const custom = structuredClone(DEFAULT_SETTINGS.planner.arrangements[0]);
+  const history = getArrangementSlot(custom, 'history');
+  delete history.includeLorebook;
+  history.includeExtensionInjections = 'yes';
+  history.includeAuthorsNote = 1;
+
+  const settings = normalizeSettings({
+    planner: { activeArrangement: 'Default', arrangements: [custom] },
+  });
+
+  assert.deepEqual(getActivePlannerContext(settings.planner), {
+    contextMode: 'minimal',
+    historyMode: 'full',
+    historyDepth: 5,
+    includeSummaryception: true,
+    includeLorebook: false,
+    includeExtensionInjections: false,
+    includeAuthorsNote: false,
+  });
 });
 
 test('malformed arrangements return to safe defaults', () => {

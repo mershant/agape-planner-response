@@ -19,24 +19,85 @@ function visibleMessage(message) {
     && message?.extra?.sc_ghosted !== true;
 }
 
-export function collectPlannerHistory(chat, settings) {
-  const messages = (Array.isArray(chat) ? chat : [])
-    .filter(visibleMessage)
-    .map((message) => ({
+const VISIBILITY_SETTING = Object.freeze({
+  lorebook: 'includeLorebook',
+  'extension-injection': 'includeExtensionInjections',
+  'authors-note': 'includeAuthorsNote',
+});
+
+function nativeContentEnabled(content, settings) {
+  const setting = VISIBILITY_SETTING[content?.kind];
+  return setting && settings?.[setting] === true && nonblank(content?.content);
+}
+
+function nativeHistoryMessage(content) {
+  return {
+    native: true,
+    kind: content.kind,
+    role: content.role,
+    content: content.content,
+  };
+}
+
+function anchorMessages(chat) {
+  return (Array.isArray(chat) ? chat : [])
+    .filter((message) => message?.is_system !== true
+      && message?.extra?.[Symbol.for('ignore')] !== true
+      && nonblank(message?.mes));
+}
+
+export function collectPlannerHistory(chat, settings, nativePromptContent = {}) {
+  const anchored = anchorMessages(chat);
+  const messages = anchored
+    .map((message, index) => ({
       role: message.is_user === true ? 'user' : 'assistant',
       name: typeof message.name === 'string' ? message.name : '',
       content: message.mes,
-    }));
+      anchorDepth: anchored.length - index - 1,
+      visible: visibleMessage(message),
+    }))
+    .filter(({ visible }) => visible);
 
-  if (settings?.historyMode !== 'depth') return messages;
-  const depth = Number.isFinite(settings.historyDepth)
-    ? Math.max(0, Math.trunc(settings.historyDepth))
-    : 0;
-  const currentUserIndex = messages.findLastIndex((message) => message.role === 'user');
-  if (currentUserIndex === -1) return depth === 0 ? [] : messages.slice(-depth);
-  const currentUser = messages[currentUserIndex];
-  const previous = messages.slice(0, currentUserIndex);
-  return [...(depth === 0 ? [] : previous.slice(-depth)), currentUser];
+  let selected = messages;
+  if (settings?.historyMode === 'depth') {
+    const depth = Number.isFinite(settings.historyDepth)
+      ? Math.max(0, Math.trunc(settings.historyDepth))
+      : 0;
+    const currentUserIndex = messages.findLastIndex((message) => message.role === 'user');
+    if (currentUserIndex === -1) {
+      selected = depth === 0 ? [] : messages.slice(-depth);
+    } else {
+      const currentUser = messages[currentUserIndex];
+      const previous = messages.slice(0, currentUserIndex);
+      selected = [...(depth === 0 ? [] : previous.slice(-depth)), currentUser];
+    }
+  }
+
+  const unanchored = Array.isArray(nativePromptContent?.unanchored)
+    ? nativePromptContent.unanchored
+    : [];
+  const before = unanchored
+    .filter((content) => content.placement === 'before-history'
+      && nativeContentEnabled(content, settings))
+    .map(nativeHistoryMessage);
+  const after = unanchored
+    .filter((content) => content.placement === 'after-history'
+      && nativeContentEnabled(content, settings))
+    .map(nativeHistoryMessage);
+  const anchoredContent = (Array.isArray(nativePromptContent?.anchored)
+    ? nativePromptContent.anchored
+    : []).filter((content) => nativeContentEnabled(content, settings));
+
+  const rendered = [...before];
+  for (const message of selected) {
+    const { anchorDepth, visible, ...conversationMessage } = message;
+    rendered.push(conversationMessage);
+    rendered.push(...anchoredContent
+      .filter((content) => content.anchorDepth === anchorDepth)
+      .map(nativeHistoryMessage));
+  }
+  rendered.push(...after);
+  return rendered;
 }
 
 function snippetText(snippet) {
@@ -133,6 +194,10 @@ function historyMessages(block, history, summaryception, hasUserTurn) {
     });
   }
   for (const message of Array.isArray(history) ? history : []) {
+    if (message.native === true) {
+      messages.push({ role: message.role, content: message.content });
+      continue;
+    }
     const name = message.name ? ` name="${escapeAttribute(message.name)}"` : '';
     messages.push({
       role: message.role,
@@ -152,7 +217,7 @@ export function buildPlannerContextMessages({
   substituteParams,
 }) {
   const hasUserTurn = Array.isArray(history)
-    && history.some((message) => message.role === 'user');
+    && history.some((message) => message.native !== true && message.role === 'user');
   const expand = typeof substituteParams === 'function'
     ? substituteParams
     : (content) => content;

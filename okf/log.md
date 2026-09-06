@@ -2,6 +2,7 @@
 
 ## 2026-09-06
 
+- **Planner native-content visibility**: Added three default-off History-block options for SillyTavern-activated lorebook entries, generic extension in-chat injections, and author's note. Native dry-run assembly owns activation, roles, bytes, placement, and token omission; history depth still excludes content with an out-of-slice anchor. Deterministic and isolated live checks covered all-off, lorebook-only, and extension-only packets.
 - **Reasoning level**: Each stage has a reasoning dropdown below its model override. Unset keeps today's request bytes, Off sends the explicit disable shape, and the other levels map to the target's Gemini or effort dialect without editing presets.
 - **Response retry**: After Planning, a blank or too-short Response is sent again as the identical request until it is acceptable or the retry count is exhausted. Planner stays one request with identical Planning bytes. The old two-request limit and no-retry rule were revised in their owning contracts.
 - **Arrangement packet assembly**: Planner requests now follow the active arrangement's block order, toggles, roles, slot settings, and native-expanded text. Deterministic checks preserve the proven Default packet byte for byte and cover reorder, disable, added-text, role-override, and adaptive-role behavior.

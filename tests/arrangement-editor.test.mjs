@@ -84,11 +84,17 @@ test('template protection and History options are enforced by editor operations'
     historyMode: 'depth',
     historyDepth: 12,
     includeSummaryception: true,
+    includeLorebook: true,
+    includeExtensionInjections: true,
+    includeAuthorsNote: true,
     role: 'user',
   });
   const history = getArrangementSlot(getActiveArrangement(planner), 'history');
   assert.equal(history.historyMode, 'depth');
   assert.equal(history.historyDepth, 12);
   assert.equal(history.includeSummaryception, false);
+  assert.equal(history.includeLorebook, true);
+  assert.equal(history.includeExtensionInjections, true);
+  assert.equal(history.includeAuthorsNote, true);
   assert.equal(history.role, 'user');
 });

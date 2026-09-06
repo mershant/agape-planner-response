@@ -186,6 +186,50 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
       );
       options.append(label);
     }
+
+    const visibility = element('div', { className: 'agape-pr__history-visibility' });
+    const heading = element('div', { className: 'agape-pr__visibility-heading' });
+    heading.append(
+      element('strong', {}, 'Planner visibility'),
+      element('small', {}, 'Add native prompt content to History. All off keeps the current packet.'),
+    );
+    visibility.append(heading);
+
+    const addVisibilityOption = (action, checked, label, description) => {
+      const row = element('label', {
+        className: 'checkbox_label agape-pr__visibility-option',
+        title: description,
+      });
+      row.append(
+        element('input', {
+          type: 'checkbox',
+          checked,
+          dataset: { blockAction: action, blockId: block.id },
+        }),
+        element('span', { className: 'agape-pr__visibility-copy' }, label),
+      );
+      visibility.append(row);
+    };
+
+    addVisibilityOption(
+      'lorebook',
+      block.includeLorebook,
+      'Triggered lorebook / World Info',
+      'World Info that SillyTavern activates for this Send.',
+    );
+    addVisibilityOption(
+      'extension-injections',
+      block.includeExtensionInjections,
+      'Extension in-chat injections',
+      'Content extensions place beside conversation messages.',
+    );
+    addVisibilityOption(
+      'authors-note',
+      block.includeAuthorsNote,
+      'Author’s note',
+      'The note at the position chosen in SillyTavern.',
+    );
+    options.append(visibility);
     return options;
   }
 
@@ -366,6 +410,9 @@ export async function mountSettings({ context, initialSettings, saveSecret }) {
       'history-mode': { historyMode: event.target.value },
       'history-depth': { historyDepth: event.target.valueAsNumber },
       summaryception: { includeSummaryception: event.target.checked },
+      lorebook: { includeLorebook: event.target.checked },
+      'extension-injections': { includeExtensionInjections: event.target.checked },
+      'authors-note': { includeAuthorsNote: event.target.checked },
     };
     applyPlannerEdit((planner) => updateBlock(planner, blockId, edits[blockAction]));
   });

@@ -1,8 +1,4 @@
-export async function captureNormalResponseMessages(
-  context,
-  squashMessages,
-  generationType = 'normal',
-) {
+export async function captureAssembledPrompt(context, generationType = 'normal') {
   if (context.mainApi !== 'openai') {
     throw new Error('Planner Response currently supports Chat Completion only');
   }
@@ -21,6 +17,15 @@ export async function captureNormalResponseMessages(
   }
 
   if (!captured) throw new Error('SillyTavern did not assemble a Chat Completion prompt');
+  return captured;
+}
+
+export async function captureNormalResponseMessages(
+  context,
+  squashMessages,
+  generationType = 'normal',
+) {
+  const captured = await captureAssembledPrompt(context, generationType);
   if (!context.chatCompletionSettings?.squash_system_messages) return captured;
   if (typeof squashMessages !== 'function') {
     throw new Error('SillyTavern system-message squashing is unavailable');

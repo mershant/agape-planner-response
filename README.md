@@ -21,7 +21,9 @@ It does not inherit AGAPE Lite's abandoned Planner architecture.
 
 The Planner can use Minimal context or copy the enabled prompts from the current
 active preset as separate native-role messages inside one `<preset>` block.
-History can be full or depth-limited.
+History can be full or depth-limited. Each arrangement can separately let the
+Planner see SillyTavern's triggered lorebook entries, extension in-chat
+injections, and author's note. All three options default to off, and
 Summaryception can be included only with full history.
 
 The preset block is reference material for the later roleplay response. A

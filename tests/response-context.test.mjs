@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { captureNormalResponseMessages } from '../src/response-context.mjs';
+import {
+  captureAssembledPrompt,
+  captureNormalResponseMessages,
+} from '../src/response-context.mjs';
 
 function createEventSource() {
   const listeners = new Map();
@@ -81,6 +84,33 @@ test('prompt capture mirrors native consecutive system-message squashing when en
     { role: 'user', content: 'Turn' },
   ]);
   assert.equal(called, true);
+});
+
+test('assembled prompt capture exposes the unsquashed native dry-run view', async () => {
+  const eventSource = createEventSource();
+  const context = {
+    mainApi: 'openai',
+    chatCompletionSettings: { squash_system_messages: true },
+    eventTypes: { CHAT_COMPLETION_PROMPT_READY: 'prompt' },
+    eventSource,
+    async generate() {
+      eventSource.emit('prompt', {
+        dryRun: true,
+        chat: [
+          { role: 'system', content: 'Lore' },
+          { role: 'system', content: 'Injection' },
+          { role: 'user', content: 'Current turn' },
+        ],
+      });
+    },
+  };
+
+  assert.deepEqual(await captureAssembledPrompt(context), [
+    { role: 'system', content: 'Lore' },
+    { role: 'system', content: 'Injection' },
+    { role: 'user', content: 'Current turn' },
+  ]);
+  assert.equal(eventSource.count(), 0);
 });
 
 test('swipe Response prompt uses SillyTavern swipe assembly', async () => {

@@ -104,8 +104,46 @@
 .agape-pr__block-tools { grid-column: 2; }
 
 .agape-pr__block-body { min-height: 92px; resize: vertical; }
-.agape-pr__history-options { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.agape-pr__history-options { display: grid; grid-template-columns: 1fr; gap: 7px; }
 .agape-pr__history-options .checkbox_label { align-self: end; }
+.agape-pr__history-visibility {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--agape-pr-muted) 24%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #222) 84%, transparent);
+}
+
+.agape-pr__visibility-heading {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.agape-pr__visibility-heading small {
+  color: var(--agape-pr-muted);
+  line-height: 1.35;
+}
+
+.agape-pr__visibility-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center !important;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: 5px;
+}
+
+.agape-pr__visibility-option:hover,
+.agape-pr__visibility-option:focus-within {
+  background: color-mix(in srgb, var(--agape-pr-accent) 10%, transparent);
+}
+
+.agape-pr__visibility-copy { font-weight: 600; line-height: 1.3; }
 .agape-pr__add-block { justify-self: start; width: auto; min-width: 132px; white-space: nowrap; }
 
 @media (max-width: 520px) {
@@ -113,6 +151,5 @@
   .agape-pr__key-row .menu_button { width: 100%; }
   .agape-pr__arrangement-bar { grid-template-columns: 1fr 1fr; }
   .agape-pr__block-tools { flex-wrap: wrap; }
-  .agape-pr__history-options { grid-template-columns: 1fr; }
   .agape-pr__add-block { width: 100%; }
 }
